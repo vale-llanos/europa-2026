@@ -873,6 +873,7 @@
 
   <!-- RESERVATIONS VIEW -->
   <div id="view-reservations" class="hidden">
+    <div id="resFilterBar" style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;"></div>
     <div id="reservationsList"></div>
   </div>
 </div>
@@ -1124,6 +1125,13 @@ async function seedReservas() {
   }
 }
 
+function normalizeDates() {
+  DATA.records.forEach(r => {
+    const iso = fechaToISO(r.fecha || '');
+    if (iso) r.fecha = isoToFecha(iso);
+  });
+}
+
 async function checkAndSeedDatabase() {
   const loadMsg = document.querySelector('#loadingOverlay p');
 
@@ -1132,7 +1140,7 @@ async function checkAndSeedDatabase() {
     await seedActividades();
     acts = await dbLoadActivities();
   }
-  if (acts.length > 0) { DATA.records = acts; sortRecords(); }
+  if (acts.length > 0) { DATA.records = acts; normalizeDates(); sortRecords(); }
 
   let reservas = await dbLoadReservations();
   if (reservas.length === 0 && DATA.reservations.length > 0) {
@@ -1155,6 +1163,7 @@ async function loadData() {
       if (s) DATA.records = JSON.parse(s);
       const r = localStorage.getItem('eurotrip2026_res');
       if (r) DATA.reservations = JSON.parse(r);
+      normalizeDates(); sortRecords();
     } catch(e) {}
   }
   showLoading(false);
@@ -1166,6 +1175,7 @@ let currentCity    = null;
 let currentFilter  = 'all';
 let currentVacFilter = 'all';
 let calendarMode   = false;
+let resPayFilter   = 'all';
 let map            = null;
 let cityMarkers    = {};
 
@@ -1233,7 +1243,7 @@ function renderCityGrid() {
   DATA.cityOrder.forEach((city, idx) => {
     const items = DATA.records.filter(r => r.ciudad === city);
     const dates = [...new Set(items.map(r => r.fecha))];
-    const budget = items.reduce((s,r) => s+(r.presupuesto||0), 0);
+    const budget = items.reduce((s,r) => s+(parseFloat(r.presupuesto)||0), 0);
     const workCount = items.filter(r => classifyCategory(r.categoria) === 'work').length;
     const vacCount  = new Set(items.filter(r => r.vacaciones==='Si').map(r => r.fecha)).size;
     const card = document.createElement('div');
@@ -1388,7 +1398,7 @@ function renderCalendar() {
     for (let i = 0; i < firstDow; i++) grid.innerHTML += '<div class="cal-day cal-empty"></div>';
 
     for (let d = 1; d <= days; d++) {
-      const key = `${d}-${MONTH_ABR[month]}`;
+      const key = `${String(d).padStart(2,'0')}-${MONTH_ABR[month]}`;
       const inTrip = !!dateInTrip[key];
       const isVac  = !!dateIsVac[key];
       const hasT   = !!dateHasTransport[key];
@@ -1452,11 +1462,11 @@ function renderSummary() {
   budgetList.innerHTML = '';
   let total = 0;
   DATA.cityOrder.forEach(city => {
-    const sum = DATA.records.filter(r=>r.ciudad===city).reduce((s,r)=>s+r.presupuesto,0);
+    const sum = DATA.records.filter(r=>r.ciudad===city).reduce((s,r)=>s+(parseFloat(r.presupuesto)||0),0);
     total += sum;
     budgetList.innerHTML += `<div class="summary-row"><span class="label">${city}</span><span class="value">€${sum.toFixed(0)}</span></div>`;
   });
-  const transitSum = DATA.records.filter(r=>r.ciudad==='Vuelo'||r.ciudad==='Bus').reduce((s,r)=>s+r.presupuesto,0);
+  const transitSum = DATA.records.filter(r=>r.ciudad==='Vuelo'||r.ciudad==='Bus').reduce((s,r)=>s+(parseFloat(r.presupuesto)||0),0);
   total += transitSum;
   if (transitSum > 0) budgetList.innerHTML += `<div class="summary-row"><span class="label">Tránsito</span><span class="value">€${transitSum.toFixed(0)}</span></div>`;
   budgetList.innerHTML += `<div class="summary-row" style="margin-top:8px;padding-top:12px;border-top:2px solid var(--accent);"><span class="label" style="color:var(--accent);font-weight:700;">TOTAL ESTIMADO</span><span class="value" style="color:var(--accent);font-size:1.1rem;">€${total.toFixed(0)}</span></div>`;
@@ -1506,7 +1516,24 @@ function renderSummary() {
       const secTotal = grp[key].reduce((s,r)=>s+(r.precio||0),0);
       resList.innerHTML += `<div class="summary-row"><span class="label" style="color:${color};font-weight:700;">${label} (${grp[key].length})</span><span class="value" style="color:${color};">€${secTotal.toFixed(0)}</span></div>`;
       grp[key].forEach(r => {
-        resList.innerHTML += `<div class="summary-row" style="padding-left:16px;border-bottom:none;padding-bottom:2px;"><span class="label" style="font-size:0.82rem;">${r.nombre} · ${r.ciudad}</span><span class="value" style="font-size:0.82rem;">${r.precio>0?'€'+Number(r.precio).toFixed(0):'—'}</span></div>`;
+        const perPerson = r.precio > 0 && r.personas > 1 ? `€${(r.precio / r.personas).toFixed(0)}/pers` : '';
+        const meta = [
+          r.personas > 1 ? `👥 ${r.personas}` : '',
+          r.whoPaid    ? `pagó ${r.whoPaid}` : '',
+          r.installments > 1 ? `${r.installments} cuotas` : '',
+          r.payDue     ? `vence ${r.payDue}` : '',
+        ].filter(Boolean).join(' · ');
+        resList.innerHTML += `
+          <div class="summary-row" style="padding-left:16px;border-bottom:none;padding-bottom:4px;align-items:flex-start;">
+            <span class="label" style="font-size:0.82rem;">
+              ${r.nombre} · ${r.ciudad}
+              ${meta ? `<span style="display:block;font-size:0.75rem;color:var(--text-dim);margin-top:1px;">${meta}</span>` : ''}
+            </span>
+            <span class="value" style="font-size:0.82rem;text-align:right;">
+              ${r.precio > 0 ? `€${Number(r.precio).toFixed(0)}` : '—'}
+              ${perPerson ? `<span style="display:block;font-size:0.72rem;color:var(--text-dim);">${perPerson}</span>` : ''}
+            </span>
+          </div>`;
       });
     });
   resList.innerHTML += `
@@ -1522,24 +1549,53 @@ function renderSummary() {
 
 // ── Reservations view ─────────────────────────────────────────────────────────
 function renderReservations() {
+  // ── Filter bar ──────────────────────────────────────────────────────────────
+  const bar = document.getElementById('resFilterBar');
+  bar.innerHTML = '';
+  const FILTERS = [
+    { key:'all',    label:'Todas' },
+    { key:'paid',   label:'✅ Pagado' },
+    { key:'topay',  label:'📅 Por pagar' },
+    { key:'unpaid', label:'❌ Sin pagar' },
+    { key:'other',  label:'— Sin estado' },
+  ];
+  FILTERS.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (resPayFilter === f.key ? ' active' : '');
+    btn.textContent = f.label;
+    btn.onclick = () => { resPayFilter = f.key; renderReservations(); };
+    bar.appendChild(btn);
+  });
+
   const list = document.getElementById('reservationsList');
   list.innerHTML = '';
   DATA.cityOrder.forEach((city, cidx) => {
-    const cityRecs = DATA.reservations.filter(r => r.ciudad === city);
+    const allCityRecs = DATA.reservations.filter(r => r.ciudad === city);
+    const cityRecs = resPayFilter === 'all'
+      ? allCityRecs
+      : allCityRecs.filter(r => (r.payStatus || 'other') === resPayFilter);
+    if (!cityRecs.length && resPayFilter !== 'all') return;
     const section = document.createElement('div');
     section.className = 'res-city-section';
+    const isCollapsed = allCityRecs.length === 0;
     const header = document.createElement('div');
     header.className = 'res-city-header';
-    header.innerHTML = `<h3><span class="res-city-dot" style="background:${CITY_COLORS[cidx]}"></span>${city}</h3>`;
+    header.style.cursor = 'pointer';
+    header.innerHTML = `<h3><span class="res-city-dot" style="background:${CITY_COLORS[cidx]}"></span>${city} <span class="res-chevron" style="font-size:0.7rem;color:var(--text-dim);margin-left:4px;display:inline-block;transition:transform 0.2s;transform:${isCollapsed?'rotate(-90deg)':'rotate(0deg)'}">▾</span></h3>`;
     const addBtn = document.createElement('button');
     addBtn.className = 'add-res-btn';
     addBtn.textContent = '+ Reserva';
-    addBtn.onclick = () => openResModal({reservation:null, ciudad:city});
+    addBtn.onclick = e => { e.stopPropagation(); openResModal({reservation:null, ciudad:city}); };
     header.appendChild(addBtn);
+    header.onclick = () => {
+      const nowHidden = cards.classList.toggle('hidden');
+      header.querySelector('.res-chevron').style.transform = nowHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+    };
     section.appendChild(header);
     const cards = document.createElement('div');
     cards.className = 'res-cards';
-    if (!cityRecs.length) {
+    if (isCollapsed) cards.classList.add('hidden');
+    if (!allCityRecs.length) {
       cards.innerHTML = '<p class="res-empty">Sin reservas aún. Agrega hoteles, restaurantes, atracciones...</p>';
     } else {
       cityRecs.forEach(res => {
