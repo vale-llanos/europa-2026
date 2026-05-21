@@ -1380,13 +1380,35 @@ function cityColor(city) {
   return CITY_COLORS[i >= 0 ? i % CITY_COLORS.length : 0];
 }
 
+const TRANSIT_MODES = new Set(['Vuelo', 'Bus', 'Tren', 'Ferry', 'vuelo', 'bus', 'tren', 'ferry']);
+
 function discoverCities() {
   const known = new Set(DATA.cityOrder);
   DATA.records.forEach(r => {
-    if (r.ciudad && !known.has(r.ciudad)) {
+    if (!r.ciudad) return;
+    // Backfill cityCoords from individual activity coords for any city missing map data
+    if (r.coords && Array.isArray(r.coords) && r.coords.length === 2 && !DATA.cityCoords[r.ciudad]) {
+      DATA.cityCoords[r.ciudad] = r.coords;
+    }
+    // Add new real cities (skip transit mode names)
+    if (!known.has(r.ciudad) && !TRANSIT_MODES.has(r.ciudad)) {
       DATA.cityOrder.push(r.ciudad);
       known.add(r.ciudad);
     }
+  });
+  // Sort cities chronologically by their first activity date + time
+  const firstKey = {};
+  DATA.records.forEach(r => {
+    if (!r.ciudad || !r.fecha) return;
+    const iso = fechaToISO(r.fecha);
+    if (!iso) return;
+    const key = iso + '|' + String(r.horario || '');
+    if (!firstKey[r.ciudad] || key < firstKey[r.ciudad]) firstKey[r.ciudad] = key;
+  });
+  DATA.cityOrder.sort((a, b) => {
+    const da = firstKey[a] || '9999-99-99|';
+    const db = firstKey[b] || '9999-99-99|';
+    return da.localeCompare(db);
   });
   populateCiudadDatalist();
 }
