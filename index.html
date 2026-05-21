@@ -1101,7 +1101,6 @@ DATA.reservations = [];
 async function seedActividades() {
   const loadMsg = document.querySelector('#loadingOverlay p');
   if (loadMsg) loadMsg.textContent = 'Primera vez: guardando itinerario en la nube…';
-  // Strip any stale local id field; Supabase auto-generates the real one
   const rows = DATA.records.map(({ id: _id, ...r }) => r);
   const BATCH = 50;
   for (let i = 0; i < rows.length; i += BATCH) {
@@ -1110,21 +1109,42 @@ async function seedActividades() {
   }
 }
 
+async function seedReservas() {
+  if (!DATA.reservations || DATA.reservations.length === 0) return;
+  const loadMsg = document.querySelector('#loadingOverlay p');
+  if (loadMsg) loadMsg.textContent = 'Primera vez: guardando reservas en la nube…';
+  const rows = DATA.reservations.map(({ id: _id, ...r }) => r);
+  const BATCH = 50;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const { error } = await sb.from('reservas').insert(rows.slice(i, i + BATCH));
+    if (error) throw error;
+  }
+}
+
+async function checkAndSeedDatabase() {
+  const loadMsg = document.querySelector('#loadingOverlay p');
+
+  let acts = await dbLoadActivities();
+  if (acts.length === 0 && DATA.records.length > 0) {
+    await seedActividades();
+    acts = await dbLoadActivities();
+  }
+  if (acts.length > 0) { DATA.records = acts; sortRecords(); }
+
+  let reservas = await dbLoadReservations();
+  if (reservas.length === 0 && DATA.reservations.length > 0) {
+    await seedReservas();
+    reservas = await dbLoadReservations();
+  }
+  DATA.reservations = reservas;
+
+  if (loadMsg) loadMsg.textContent = 'Cargando datos…';
+}
+
 async function loadData() {
   showLoading(true);
-  const loadMsg = document.querySelector('#loadingOverlay p');
   try {
-    let acts = await dbLoadActivities();
-
-    if (acts.length === 0 && DATA.records.length > 0) {
-      // Auto-seed the hardcoded itinerary on first run
-      await seedActividades();
-      acts = await dbLoadActivities(); // reload to get Supabase-generated IDs
-    }
-
-    if (acts.length > 0) { DATA.records = acts; sortRecords(); }
-
-    DATA.reservations = await dbLoadReservations();
+    await checkAndSeedDatabase();
   } catch (err) {
     console.warn('Supabase unavailable, using local fallback:', err.message);
     try {
@@ -1134,7 +1154,6 @@ async function loadData() {
       if (r) DATA.reservations = JSON.parse(r);
     } catch(e) {}
   }
-  if (loadMsg) loadMsg.textContent = 'Cargando datos…';
   showLoading(false);
 }
 
