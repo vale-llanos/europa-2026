@@ -511,6 +511,207 @@
     color: var(--accent);
     background: var(--accent-soft);
   }
+
+  /* === CALENDAR === */
+  .cal-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 640px) { .cal-container { grid-template-columns: 1fr; } }
+  .cal-month {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .cal-month-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+    text-align: center;
+    color: var(--text);
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .cal-dow {
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    font-weight: 600;
+    padding: 4px 0;
+    text-transform: uppercase;
+  }
+  .cal-day {
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 3px 1px;
+    background: var(--surface-2);
+    min-height: 38px;
+    border: 1px solid transparent;
+  }
+  .cal-day.empty { background: transparent; border-color: transparent; }
+  .cal-day.has-city { cursor: pointer; }
+  .cal-day.has-city:hover { filter: brightness(1.25); }
+  .cal-day.filtered { opacity: 0.2; cursor: default; }
+  .cal-day.is-vac .cal-day-num { color: var(--vacation); }
+  .cal-day-num { font-weight: 700; font-size: 0.78rem; line-height: 1.5; }
+  .cal-city-label {
+    font-size: 0.5rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.1;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 0 1px;
+  }
+  .cal-legend {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .cal-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .cal-legend-item:hover { color: var(--accent); }
+  .cal-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* === CITY FILTER BAR === */
+  .city-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+    align-items: center;
+  }
+  .city-filter-btn {
+    padding: 4px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .city-filter-btn.active { color: white; }
+  .city-filter-btn:hover:not(.active) { color: var(--text); border-color: var(--text-dim); }
+
+  /* === RESERVATIONS === */
+  .res-city-section { margin-bottom: 28px; }
+  .res-city-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .res-city-header h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .res-city-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+  }
+  .add-res-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .add-res-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .res-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .res-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--city-color, var(--accent));
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .res-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .res-card-name { font-weight: 700; font-size: 0.95rem; }
+  .res-card-controls {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .res-card:hover .res-card-controls { opacity: 1; }
+  .res-card-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+  }
+  .res-card-row:last-child { margin-bottom: 0; }
+  .res-card-row a {
+    color: var(--tourism);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .res-card-row a:hover { text-decoration: underline; }
+  .res-card-row strong { color: var(--text); }
+  .res-empty {
+    color: var(--text-dim);
+    font-size: 0.82rem;
+    font-style: italic;
+    padding: 6px 0;
+  }
 </style>
 </head>
 <body>
@@ -526,6 +727,7 @@
     <button class="tab active" data-view="home">🏙️ Ciudades</button>
     <button class="tab" data-view="timeline">📅 Cronología</button>
     <button class="tab" data-view="summary">✨ Resumen</button>
+    <button class="tab" data-view="reservations">🎫 Reservas</button>
   </div>
 
   <!-- HOME VIEW: map + city cards -->
@@ -538,7 +740,9 @@
   <div id="view-timeline" class="hidden">
     <button class="back-btn hidden" id="backBtn">← Todas las ciudades</button>
     <div class="toolbar">
-      <span style="font-size:0.85rem;color:var(--text-dim);margin-right:4px;">Filtros:</span>
+      <button class="filter-btn" id="calToggle">🗓️ Calendario</button>
+      <div style="width:1px;background:var(--border);align-self:stretch;margin:0 4px;flex-shrink:0;"></div>
+      <span style="font-size:0.8rem;color:var(--text-dim);margin-right:2px;">Tipo:</span>
       <button class="filter-btn active" data-filter="all">Todos</button>
       <button class="filter-btn" data-filter="tourism">🏛️ Turismo</button>
       <button class="filter-btn" data-filter="food">🍽️ Comida</button>
@@ -546,6 +750,8 @@
       <button class="filter-btn" data-filter="transport">🚆 Transporte</button>
       <button class="filter-btn" data-filter="rest">😴 Descanso</button>
     </div>
+    <div class="city-filter-bar" id="cityFilterBar"></div>
+    <div id="calendar" class="hidden"></div>
     <div id="timeline"></div>
   </div>
 
@@ -564,6 +770,57 @@
       <h2>💻 Bloques de trabajo remoto</h2>
       <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Horarios marcados como trabajo (3pm-7pm COL aprox):</p>
       <div id="workList"></div>
+    </div>
+  </div>
+
+  <!-- RESERVATIONS VIEW -->
+  <div id="view-reservations" class="hidden">
+    <div id="reservationsList"></div>
+  </div>
+</div>
+
+<!-- RESERVATION MODAL -->
+<div class="modal-overlay hidden" id="resModalOverlay">
+  <div class="modal">
+    <h3>
+      <span id="resModalTitle">Nueva reserva</span>
+      <button class="modal-close" id="resModalClose">✕</button>
+    </h3>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Nombre del lugar</label>
+        <input type="text" id="rNombre" placeholder="Hotel, restaurante, atracción...">
+      </div>
+      <div class="form-group full">
+        <label>Enlace / URL</label>
+        <input type="url" id="rLink" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label>N° de confirmación</label>
+        <input type="text" id="rConfirmacion" placeholder="ABC-123456">
+      </div>
+      <div class="form-group">
+        <label>Precio (€)</label>
+        <input type="number" id="rPrecio" placeholder="0" min="0" step="0.01">
+      </div>
+      <div class="form-group full">
+        <label>Ubicación / Dirección</label>
+        <input type="text" id="rUbicacion" placeholder="Calle Mayor 1, Madrid">
+      </div>
+      <div class="form-group">
+        <label>N° de personas</label>
+        <input type="number" id="rPersonas" placeholder="1" min="1" step="1" value="1">
+      </div>
+      <div class="form-group">
+        <label>Ciudad</label>
+        <select id="rCiudad"></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger hidden" id="rBtnDelete">Eliminar</button>
+      <div class="spacer"></div>
+      <button class="btn-secondary" id="rBtnCancel">Cancelar</button>
+      <button class="btn-primary" id="rBtnSave">Guardar</button>
     </div>
   </div>
 </div>
@@ -634,12 +891,19 @@ const DATA = {"cityOrder": ["Madrid", "Alicante", "Barcelona", "París", "Brusel
 
 // localStorage persistence
 const STORAGE_KEY = 'eurotrip2026_v1';
+const RES_KEY = 'eurotrip2026_res';
+DATA.reservations = [];
 (function() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) { try { DATA.records = JSON.parse(saved); } catch(e) {} }
+  const savedRes = localStorage.getItem(RES_KEY);
+  if (savedRes) { try { DATA.reservations = JSON.parse(savedRes); } catch(e) {} }
 })();
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA.records));
+}
+function saveReservations() {
+  localStorage.setItem(RES_KEY, JSON.stringify(DATA.reservations));
 }
 
 // State
@@ -910,6 +1174,7 @@ function switchView(view) {
   document.getElementById('view-home').classList.toggle('hidden', view !== 'home');
   document.getElementById('view-timeline').classList.toggle('hidden', view !== 'timeline');
   document.getElementById('view-summary').classList.toggle('hidden', view !== 'summary');
+  document.getElementById('view-reservations').classList.toggle('hidden', view !== 'reservations');
 
   if (view === 'home') {
     currentCity = null;
@@ -917,9 +1182,12 @@ function switchView(view) {
     setTimeout(() => { if (map) map.invalidateSize(); }, 100);
   } else if (view === 'timeline') {
     if (!currentCity) document.getElementById('backBtn').classList.add('hidden');
-    renderTimeline();
+    renderCityFilterBar();
+    if (calendarMode) renderCalendar(); else renderTimeline();
   } else if (view === 'summary') {
     renderSummary();
+  } else if (view === 'reservations') {
+    renderReservations();
   }
 }
 
@@ -944,6 +1212,269 @@ document.querySelectorAll('.filter-btn').forEach(b => {
     renderTimeline();
   };
 });
+
+// === CITY COLORS ===
+const CITY_COLORS = [
+  '#ff7849','#5db8ff','#f7c948','#ec407a','#b388ff',
+  '#46c47c','#29b6f6','#ffab40','#66bb6a','#ef5350','#ab47bc'
+];
+function cityColor(city) {
+  const i = DATA.cityOrder.indexOf(city);
+  return CITY_COLORS[i >= 0 ? i : 0];
+}
+function hexRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// === CALENDAR ===
+let calendarMode = false;
+
+function renderCalendar() {
+  const container = document.getElementById('calendar');
+  container.innerHTML = '';
+
+  const dateCity = {}, dateIsVac = {};
+  DATA.records.forEach(r => {
+    if (!dateCity[r.fecha]) dateCity[r.fecha] = r.ciudad;
+    if (r.vacaciones === 'Si') dateIsVac[r.fecha] = true;
+  });
+
+  const ABBR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const DOW  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+  const wrap = document.createElement('div');
+  wrap.className = 'cal-container';
+
+  [{ year:2026, month:6 }, { year:2026, month:7 }].forEach(({ year, month }) => {
+    const monthDiv = document.createElement('div');
+    monthDiv.className = 'cal-month';
+    const label = new Date(year, month, 1).toLocaleDateString('es', { month:'long', year:'numeric' });
+    monthDiv.innerHTML = `<div class="cal-month-name">${label[0].toUpperCase()+label.slice(1)}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'cal-grid';
+    DOW.forEach(d => { grid.innerHTML += `<div class="cal-dow">${d}</div>`; });
+    const firstDow = new Date(year, month, 1).getDay();
+    const days = new Date(year, month + 1, 0).getDate();
+    for (let i = 0; i < firstDow; i++) { grid.innerHTML += '<div class="cal-day empty"></div>'; }
+    for (let d = 1; d <= days; d++) {
+      const key = `${d}-${ABBR[month]}`;
+      const city = dateCity[key];
+      const isVac = dateIsVac[key];
+      const filtered = currentCity && city !== currentCity;
+      const color = city ? cityColor(city) : null;
+      const cell = document.createElement('div');
+      cell.className = 'cal-day' +
+        (city && !filtered ? ' has-city' : '') +
+        (isVac ? ' is-vac' : '') +
+        (filtered ? ' filtered' : '');
+      if (color && !filtered) {
+        cell.style.background = hexRgba(color, 0.15);
+        cell.style.borderColor = hexRgba(color, 0.4);
+      }
+      const short = city ? (city.length > 7 ? city.slice(0,6)+'…' : city) : '';
+      cell.innerHTML = `<span class="cal-day-num">${d}</span>`+
+        (city && !filtered ? `<span class="cal-city-label" style="color:${color}">${short}</span>` : '');
+      if (city && !filtered) {
+        cell.title = city;
+        cell.onclick = () => {
+          calendarMode = false;
+          document.getElementById('calToggle').classList.remove('active');
+          document.getElementById('calToggle').textContent = '🗓️ Calendario';
+          document.getElementById('calendar').classList.add('hidden');
+          document.getElementById('timeline').classList.remove('hidden');
+          currentCity = city;
+          renderCityFilterBar();
+          renderTimeline();
+        };
+      }
+      grid.appendChild(cell);
+    }
+    monthDiv.appendChild(grid);
+    wrap.appendChild(monthDiv);
+  });
+  container.appendChild(wrap);
+
+  const legend = document.createElement('div');
+  legend.className = 'cal-legend';
+  legend.innerHTML = '<span style="font-size:0.75rem;color:var(--text-dim);font-weight:600;">Ciudades:</span>';
+  DATA.cityOrder.forEach((city, i) => {
+    const item = document.createElement('span');
+    item.className = 'cal-legend-item';
+    item.title = `Filtrar por ${city}`;
+    item.innerHTML = `<span class="cal-legend-dot" style="background:${CITY_COLORS[i]}"></span>${city}`;
+    item.onclick = () => {
+      currentCity = city;
+      renderCityFilterBar();
+      renderCalendar();
+    };
+    legend.appendChild(item);
+  });
+  container.appendChild(legend);
+}
+
+// Calendar toggle
+document.getElementById('calToggle').onclick = () => {
+  calendarMode = !calendarMode;
+  document.getElementById('calToggle').classList.toggle('active', calendarMode);
+  document.getElementById('calToggle').textContent = calendarMode ? '📋 Lista' : '🗓️ Calendario';
+  document.getElementById('calendar').classList.toggle('hidden', !calendarMode);
+  document.getElementById('timeline').classList.toggle('hidden', calendarMode);
+  if (calendarMode) renderCalendar(); else renderTimeline();
+};
+
+// === CITY FILTER BAR ===
+function renderCityFilterBar() {
+  const bar = document.getElementById('cityFilterBar');
+  bar.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'city-filter-btn' + (!currentCity ? ' active' : '');
+  allBtn.style.cssText = !currentCity ? 'background:var(--accent);border-color:var(--accent);' : '';
+  allBtn.textContent = '🌍 Todas';
+  allBtn.onclick = () => {
+    currentCity = null;
+    document.getElementById('backBtn').classList.add('hidden');
+    renderCityFilterBar();
+    calendarMode ? renderCalendar() : renderTimeline();
+  };
+  bar.appendChild(allBtn);
+  DATA.cityOrder.forEach(city => {
+    const isActive = currentCity === city;
+    const btn = document.createElement('button');
+    btn.className = 'city-filter-btn' + (isActive ? ' active' : '');
+    if (isActive) {
+      const c = cityColor(city);
+      btn.style.cssText = `background:${c};border-color:${c};`;
+    }
+    btn.textContent = city;
+    btn.onclick = () => {
+      currentCity = city;
+      document.getElementById('backBtn').classList.add('hidden');
+      renderCityFilterBar();
+      calendarMode ? renderCalendar() : renderTimeline();
+    };
+    bar.appendChild(btn);
+  });
+}
+
+// === RESERVATIONS ===
+function renderReservations() {
+  const list = document.getElementById('reservationsList');
+  list.innerHTML = '';
+  DATA.cityOrder.forEach((city, cidx) => {
+    const cityRecs = DATA.reservations.filter(r => r.ciudad === city);
+    const section = document.createElement('div');
+    section.className = 'res-city-section';
+    const header = document.createElement('div');
+    header.className = 'res-city-header';
+    header.innerHTML = `<h3><span class="res-city-dot" style="background:${CITY_COLORS[cidx]}"></span>${city}</h3>`;
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-res-btn';
+    addBtn.textContent = '+ Reserva';
+    addBtn.onclick = () => openResModal({ reservation: null, ciudad: city });
+    header.appendChild(addBtn);
+    section.appendChild(header);
+    const cards = document.createElement('div');
+    cards.className = 'res-cards';
+    if (cityRecs.length === 0) {
+      cards.innerHTML = '<p class="res-empty">Sin reservas aún. Agrega hoteles, restaurantes, atracciones...</p>';
+    } else {
+      cityRecs.forEach(res => {
+        const idx = DATA.reservations.indexOf(res);
+        const card = document.createElement('div');
+        card.className = 'res-card';
+        card.style.setProperty('--city-color', CITY_COLORS[cidx]);
+        card.innerHTML = `
+          <div class="res-card-header">
+            <span class="res-card-name">${res.nombre}</span>
+            <div class="res-card-controls">
+              <button class="icon-btn edit-res">✏️</button>
+              <button class="icon-btn danger del-res">🗑</button>
+            </div>
+          </div>
+          ${res.ubicacion ? `<div class="res-card-row">📍 ${res.ubicacion}</div>` : ''}
+          ${res.link ? `<div class="res-card-row">🔗 <a href="${res.link}" target="_blank" rel="noopener">${res.link.replace(/^https?:\/\/(www\.)?/,'')}</a></div>` : ''}
+          ${res.confirmacion ? `<div class="res-card-row">🎟 <strong>${res.confirmacion}</strong></div>` : ''}
+          <div class="res-card-row">
+            ${res.personas ? `👥 ${res.personas} persona${res.personas > 1 ? 's' : ''}` : ''}
+            ${res.precio > 0 ? `&nbsp;·&nbsp;💰 <strong style="color:var(--accent)">€${Number(res.precio).toFixed(0)}</strong>` : ''}
+          </div>
+        `;
+        card.querySelector('.edit-res').onclick = () => openResModal({ reservation: res, index: idx });
+        card.querySelector('.del-res').onclick = () => {
+          if (confirm(`¿Eliminar "${res.nombre}"?`)) {
+            DATA.reservations.splice(idx, 1);
+            saveReservations();
+            renderReservations();
+          }
+        };
+        cards.appendChild(card);
+      });
+    }
+    section.appendChild(cards);
+    list.appendChild(section);
+  });
+}
+
+let resModalIdx = null;
+function openResModal({ reservation, index, ciudad }) {
+  resModalIdx = index !== undefined ? index : null;
+  const isNew = !reservation;
+  document.getElementById('resModalTitle').textContent = isNew ? 'Nueva reserva' : 'Editar reserva';
+  document.getElementById('rBtnDelete').classList.toggle('hidden', isNew);
+  document.getElementById('rNombre').value       = reservation ? (reservation.nombre        || '') : '';
+  document.getElementById('rLink').value         = reservation ? (reservation.link           || '') : '';
+  document.getElementById('rConfirmacion').value = reservation ? (reservation.confirmacion   || '') : '';
+  document.getElementById('rPrecio').value       = reservation ? (reservation.precio         || 0)  : 0;
+  document.getElementById('rUbicacion').value    = reservation ? (reservation.ubicacion      || '') : '';
+  document.getElementById('rPersonas').value     = reservation ? (reservation.personas       || 1)  : 1;
+  const sel = document.getElementById('rCiudad');
+  sel.innerHTML = '';
+  DATA.cityOrder.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    if (c === (reservation ? reservation.ciudad : ciudad)) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  document.getElementById('resModalOverlay').classList.remove('hidden');
+  setTimeout(() => document.getElementById('rNombre').focus(), 60);
+}
+function closeResModal() {
+  document.getElementById('resModalOverlay').classList.add('hidden');
+  resModalIdx = null;
+}
+function saveResModal() {
+  const nombre = document.getElementById('rNombre').value.trim();
+  if (!nombre) { document.getElementById('rNombre').focus(); return; }
+  const res = {
+    nombre,
+    link:          document.getElementById('rLink').value.trim(),
+    confirmacion:  document.getElementById('rConfirmacion').value.trim(),
+    precio:        parseFloat(document.getElementById('rPrecio').value) || 0,
+    ubicacion:     document.getElementById('rUbicacion').value.trim(),
+    personas:      parseInt(document.getElementById('rPersonas').value)  || 1,
+    ciudad:        document.getElementById('rCiudad').value
+  };
+  if (resModalIdx !== null) { DATA.reservations[resModalIdx] = res; }
+  else { DATA.reservations.push(res); }
+  saveReservations();
+  closeResModal();
+  renderReservations();
+}
+document.getElementById('resModalClose').onclick = closeResModal;
+document.getElementById('rBtnCancel').onclick    = closeResModal;
+document.getElementById('rBtnSave').onclick      = saveResModal;
+document.getElementById('rBtnDelete').onclick    = () => {
+  if (resModalIdx !== null && confirm('¿Eliminar esta reserva?')) {
+    DATA.reservations.splice(resModalIdx, 1);
+    saveReservations();
+    closeResModal();
+    renderReservations();
+  }
+};
+document.getElementById('resModalOverlay').onclick = (e) => {
+  if (e.target === document.getElementById('resModalOverlay')) closeResModal();
+};
 
 // === EDIT MODAL ===
 let modalEditIndex = null;
