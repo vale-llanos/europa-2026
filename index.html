@@ -712,6 +712,18 @@
     font-style: italic;
     padding: 6px 0;
   }
+  .pay-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .pay-badge.paid    { background: #46c47c20; color: var(--vacation); }
+  .pay-badge.topay   { background: #f7c94820; color: var(--work); }
+  .pay-badge.unpaid  { background: #ef444420; color: #ef4444; }
 </style>
 </head>
 <body>
@@ -815,6 +827,41 @@
         <label>Ciudad</label>
         <select id="rCiudad"></select>
       </div>
+      <div class="form-group">
+        <label>Fecha de reserva</label>
+        <input type="text" id="rFecha" placeholder="26-Jul">
+      </div>
+      <div class="form-group">
+        <label>Check-in</label>
+        <input type="time" id="rCheckin">
+      </div>
+      <div class="form-group">
+        <label>Check-out</label>
+        <input type="time" id="rCheckout">
+      </div>
+      <div class="form-group full">
+        <label>Estado de pago</label>
+        <select id="rPayStatus">
+          <option value="">— Sin especificar —</option>
+          <option value="paid">✅ Pagado</option>
+          <option value="topay">📅 Por pagar</option>
+          <option value="unpaid">❌ Sin pagar</option>
+        </select>
+      </div>
+      <div id="rPayPaidFields" class="hidden form-grid" style="grid-column:1/-1;gap:14px;padding:0;">
+        <div class="form-group">
+          <label>¿Quién pagó?</label>
+          <input type="text" id="rWhoPaid" placeholder="Vale, mamá...">
+        </div>
+        <div class="form-group">
+          <label>N° de cuotas</label>
+          <input type="number" id="rInstallments" placeholder="1" min="1" step="1">
+        </div>
+      </div>
+      <div id="rPayToPayFields" class="hidden form-group full">
+        <label>Fecha límite de pago</label>
+        <input type="text" id="rPayDue" placeholder="15-Jun">
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-danger hidden" id="rBtnDelete">Eliminar</button>
@@ -877,6 +924,8 @@
           <option value="VIERNES">Viernes</option>
           <option value="SABADO">Sábado</option>
           <option value="DOMINGO">Domingo</option>
+        </select>
+      </div>
         </select>
       </div>
       <div class="form-group full">
@@ -1403,10 +1452,25 @@ function renderReservations() {
           ${res.ubicacion ? `<div class="res-card-row">📍 ${res.ubicacion}</div>` : ''}
           ${res.link ? `<div class="res-card-row">🔗 <a href="${res.link}" target="_blank" rel="noopener">${res.link.replace(/^https?:\/\/(www\.)?/,'')}</a></div>` : ''}
           ${res.confirmacion ? `<div class="res-card-row">🎟 <strong>${res.confirmacion}</strong></div>` : ''}
+          ${res.fecha || res.checkin || res.checkout ? `<div class="res-card-row">
+            ${res.fecha ? `📅 ${res.fecha}` : ''}
+            ${(res.fecha && (res.checkin || res.checkout)) ? '&nbsp;·&nbsp;' : ''}
+            ${res.checkin ? `🕐 Check-in ${res.checkin}` : ''}
+            ${(res.checkin && res.checkout) ? '&nbsp;–&nbsp;' : ''}
+            ${res.checkout ? `Check-out ${res.checkout}` : ''}
+          </div>` : ''}
           <div class="res-card-row">
             ${res.personas ? `👥 ${res.personas} persona${res.personas > 1 ? 's' : ''}` : ''}
             ${res.precio > 0 ? `&nbsp;·&nbsp;💰 <strong style="color:var(--accent)">€${Number(res.precio).toFixed(0)}</strong>` : ''}
           </div>
+          ${res.payStatus ? `<div class="res-card-row" style="margin-top:6px;flex-wrap:wrap;gap:6px;">
+            <span class="pay-badge ${res.payStatus}">
+              ${res.payStatus==='paid' ? '✅ Pagado' : res.payStatus==='topay' ? '📅 Por pagar' : '❌ Sin pagar'}
+            </span>
+            ${res.payStatus==='paid' && res.whoPaid ? `<span style="font-size:0.78rem;color:var(--text-dim);">por ${res.whoPaid}</span>` : ''}
+            ${res.payStatus==='paid' && res.installments > 1 ? `<span style="font-size:0.78rem;color:var(--text-dim);">${res.installments} cuotas</span>` : ''}
+            ${res.payStatus==='topay' && res.payDue ? `<span style="font-size:0.78rem;color:var(--work);">vence ${res.payDue}</span>` : ''}
+          </div>` : ''}
         `;
         card.querySelector('.edit-res').onclick = () => openResModal({ reservation: res, index: idx });
         card.querySelector('.del-res').onclick = () => {
@@ -1424,6 +1488,12 @@ function renderReservations() {
   });
 }
 
+function updatePayFields(status) {
+  document.getElementById('rPayPaidFields').classList.toggle('hidden', status !== 'paid');
+  document.getElementById('rPayToPayFields').classList.toggle('hidden', status !== 'topay');
+}
+document.getElementById('rPayStatus').onchange = (e) => updatePayFields(e.target.value);
+
 let resModalIdx = null;
 function openResModal({ reservation, index, ciudad }) {
   resModalIdx = index !== undefined ? index : null;
@@ -1436,6 +1506,14 @@ function openResModal({ reservation, index, ciudad }) {
   document.getElementById('rPrecio').value       = reservation ? (reservation.precio         || 0)  : 0;
   document.getElementById('rUbicacion').value    = reservation ? (reservation.ubicacion      || '') : '';
   document.getElementById('rPersonas').value     = reservation ? (reservation.personas       || 1)  : 1;
+  document.getElementById('rFecha').value        = reservation ? (reservation.fecha           || '') : '';
+  document.getElementById('rCheckin').value      = reservation ? (reservation.checkin         || '') : '';
+  document.getElementById('rCheckout').value     = reservation ? (reservation.checkout        || '') : '';
+  document.getElementById('rPayStatus').value    = reservation ? (reservation.payStatus       || '') : '';
+  document.getElementById('rWhoPaid').value      = reservation ? (reservation.whoPaid         || '') : '';
+  document.getElementById('rInstallments').value = reservation ? (reservation.installments    || '') : '';
+  document.getElementById('rPayDue').value       = reservation ? (reservation.payDue          || '') : '';
+  updatePayFields(reservation ? reservation.payStatus : '');
   const sel = document.getElementById('rCiudad');
   sel.innerHTML = '';
   DATA.cityOrder.forEach(c => {
@@ -1461,7 +1539,14 @@ function saveResModal() {
     precio:        parseFloat(document.getElementById('rPrecio').value) || 0,
     ubicacion:     document.getElementById('rUbicacion').value.trim(),
     personas:      parseInt(document.getElementById('rPersonas').value)  || 1,
-    ciudad:        document.getElementById('rCiudad').value
+    ciudad:        document.getElementById('rCiudad').value,
+    fecha:         document.getElementById('rFecha').value.trim(),
+    checkin:       document.getElementById('rCheckin').value,
+    checkout:      document.getElementById('rCheckout').value,
+    payStatus:     document.getElementById('rPayStatus').value,
+    whoPaid:       document.getElementById('rWhoPaid').value.trim(),
+    installments:  parseInt(document.getElementById('rInstallments').value) || null,
+    payDue:        document.getElementById('rPayDue').value.trim()
   };
   if (resModalIdx !== null) { DATA.reservations[resModalIdx] = res; }
   else { DATA.reservations.push(res); }
