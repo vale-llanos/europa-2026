@@ -732,6 +732,13 @@
   .pay-badge.paid    { background: #46c47c20; color: var(--vacation); }
   .pay-badge.topay   { background: #f7c94820; color: var(--work); }
   .pay-badge.unpaid  { background: #ef444420; color: #ef4444; }
+  .tipo-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+  }
+  .tipo-badge.Alojamiento { background: #5db8ff18; color: var(--tourism); }
+  .tipo-badge.Transporte  { background: #b388ff18; color: var(--transport); }
+  .tipo-badge.Turismo     { background: #46c47c18; color: var(--vacation); }
 
   /* === FILTER DROPDOWNS === */
   .toolbar { flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -1077,6 +1084,14 @@
         <input type="time" id="rCheckout">
       </div>
       <div class="form-group full">
+        <label>Tipo de reserva</label>
+        <select id="rTipo">
+          <option value="Alojamiento">🏨 Alojamiento</option>
+          <option value="Transporte">🚆 Transporte</option>
+          <option value="Turismo">🏛️ Turismo</option>
+        </select>
+      </div>
+      <div class="form-group full">
         <label>Estado de pago</label>
         <select id="rPayStatus">
           <option value="">— Sin especificar —</option>
@@ -1095,8 +1110,8 @@
           <input type="number" id="rInstallments" placeholder="1" min="1" step="1">
         </div>
       </div>
-      <div id="rPayToPayFields" class="hidden form-group full">
-        <label>Fecha límite de pago</label>
+      <div class="form-group full">
+        <label>Fecha límite de pago <span style="color:var(--text-dim);font-weight:400;">(opcional)</span></label>
         <input type="date" id="rPayDue">
       </div>
     </div>
@@ -1154,6 +1169,12 @@
       <div class="form-group">
         <label>Día (auto)</label>
         <input type="text" id="fDia" readonly style="opacity:0.6;cursor:default;">
+      </div>
+      <div class="form-group full">
+        <label>Ciudad</label>
+        <input type="text" id="fCiudad" placeholder="Madrid, Valencia, Roma..." list="ciudadesList" autocomplete="off">
+        <datalist id="ciudadesList"></datalist>
+        <div id="fCiudadHint" style="font-size:0.72rem;margin-top:3px;min-height:1em;color:var(--text-dim);"></div>
       </div>
       <div class="form-group full">
         <label>Notas</label>
@@ -1242,7 +1263,8 @@ async function dbInsertReservation(res) {
   return data;
 }
 async function dbUpdateReservation(id, res) {
-  const { error } = await sb.from('reservas').update(res).eq('id', id);
+  const { id: _id, ...payload } = res;
+  const { error } = await sb.from('reservas').update(payload).eq('id', id);
   if (error) throw error;
 }
 async function dbDeleteReservation(id) {
@@ -1317,6 +1339,7 @@ async function loadData() {
       normalizeDates(); sortRecords();
     } catch(e) {}
   }
+  discoverCities();
   showLoading(false);
 }
 
@@ -1330,6 +1353,7 @@ let resPayFilter   = 'all';
 let map            = null;
 let cityMarkers    = {};
 let cityDetailMap  = null;
+let geocodeTimer   = null;
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function showLoading(v) {
@@ -1353,7 +1377,18 @@ const CITY_COLORS = [
 ];
 function cityColor(city) {
   const i = DATA.cityOrder.indexOf(city);
-  return CITY_COLORS[i >= 0 ? i : 0];
+  return CITY_COLORS[i >= 0 ? i % CITY_COLORS.length : 0];
+}
+
+function discoverCities() {
+  const known = new Set(DATA.cityOrder);
+  DATA.records.forEach(r => {
+    if (r.ciudad && !known.has(r.ciudad)) {
+      DATA.cityOrder.push(r.ciudad);
+      known.add(r.ciudad);
+    }
+  });
+  populateCiudadDatalist();
 }
 function hexRgba(hex, a) {
   const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
@@ -1642,6 +1677,7 @@ function renderCityReservationsList(city, cityReservations) {
         ${res.ubicacion ? `<div class="city-res-item-meta">📍 ${res.ubicacion}</div>` : ''}
         ${res.confirmacion ? `<div class="city-res-item-meta">🎟 ${res.confirmacion}</div>` : ''}
         <div class="city-res-item-meta" style="margin-top:6px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+          ${res.tipo ? `<span class="tipo-badge ${res.tipo}">${res.tipo==='Alojamiento'?'🏨':res.tipo==='Transporte'?'🚆':'🏛️'} ${res.tipo}</span>` : ''}
           <span class="pay-badge ${ps}">${payLabel}</span>
           ${payDetails ? `<span style="font-size:0.78rem;color:var(--text-dim);">${payDetails}</span>` : ''}
         </div>
@@ -1734,10 +1770,13 @@ function renderTimeline() {
         if (!confirm(`¿Eliminar "${it.actividad}"?`)) return;
         try {
           if (it.id) await dbDeleteActivity(it.id);
-          DATA.records.splice(globalIdx, 1);
-          rerender(); renderCityGrid();
-          if (currentView === 'summary') renderSummary();
-        } catch(err) { alert('Error al eliminar: ' + err.message); }
+        } catch(err) {
+          alert('No se pudo eliminar de Supabase. Ejecuta el SQL de políticas RLS en el SQL Editor de Supabase:\n\nCREATE POLICY "allow_delete" ON actividades FOR DELETE USING (true);\n\nError: ' + err.message);
+          return;
+        }
+        DATA.records.splice(globalIdx, 1);
+        rerender(); renderCityGrid();
+        if (currentView === 'summary') renderSummary();
       };
       dayDiv.appendChild(div);
     });
@@ -1893,41 +1932,61 @@ function renderSummary() {
     resList.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;font-style:italic;">Sin reservas registradas aún.</p>';
     return;
   }
-  const grp = {topay:[],unpaid:[],paid:[],other:[]};
+  const TIPOS_RES = [
+    { key:'Alojamiento', label:'🏨 Alojamiento', color:'var(--tourism)'   },
+    { key:'Transporte',  label:'🚆 Transporte',  color:'var(--transport)' },
+    { key:'Turismo',     label:'🏛️ Turismo',     color:'var(--vacation)'  },
+  ];
+  const PAY_GROUPS = [
+    { key:'topay',  label:'📅 Por pagar', color:'var(--work)'     },
+    { key:'unpaid', label:'❌ Sin pagar', color:'#ef4444'          },
+    { key:'paid',   label:'✅ Pagado',    color:'var(--vacation)'  },
+    { key:'other',  label:'— Sin estado', color:'var(--text-dim)' },
+  ];
   let totalPending = 0, totalPaid = 0;
   DATA.reservations.forEach(r => {
-    (grp[r.payStatus] || grp.other).push(r);
-    if (r.payStatus==='paid') totalPaid   += (r.precio||0);
-    else                       totalPending += (r.precio||0);
+    if (r.payStatus === 'paid') totalPaid    += (r.precio||0);
+    else                         totalPending += (r.precio||0);
   });
-  [{key:'topay',label:'📅 Por pagar',color:'var(--work)'},{key:'unpaid',label:'❌ Sin pagar',color:'#ef4444'},{key:'paid',label:'✅ Pagado',color:'var(--vacation)'},{key:'other',label:'— Sin estado',color:'var(--text-dim)'}]
-    .forEach(({key,label,color}) => {
-      if (!grp[key].length) return;
-      const secTotal = grp[key].reduce((s,r)=>s+(r.precio||0),0);
-      resList.innerHTML += `<div class="summary-row"><span class="label" style="color:${color};font-weight:700;">${label} (${grp[key].length})</span><span class="value" style="color:${color};">€${secTotal.toFixed(0)}</span></div>`;
-      grp[key].forEach(r => {
-        const perPerson = r.precio > 0 && r.personas > 1 ? `€${(r.precio / r.personas).toFixed(0)}/pers` : '';
+  TIPOS_RES.forEach(({ key:tipoKey, label:tipoLabel, color:tipoColor }) => {
+    const tipoRecs = DATA.reservations.filter(r => (r.tipo || 'Alojamiento') === tipoKey);
+    if (!tipoRecs.length) return;
+    const tipoTotal = tipoRecs.reduce((s,r) => s+(r.precio||0), 0);
+    resList.innerHTML += `
+      <div class="summary-row" style="margin-top:14px;padding-top:10px;border-top:2px solid var(--border);">
+        <span style="font-weight:800;font-size:1rem;color:${tipoColor};">${tipoLabel}</span>
+        <span class="value" style="color:${tipoColor};">€${tipoTotal.toFixed(0)}</span>
+      </div>`;
+    const grp = {topay:[],unpaid:[],paid:[],other:[]};
+    tipoRecs.forEach(r => (grp[r.payStatus] || grp.other).push(r));
+    PAY_GROUPS.forEach(({ key:pKey, label:pLabel, color:pColor }) => {
+      if (!grp[pKey].length) return;
+      const secTotal = grp[pKey].reduce((s,r)=>s+(r.precio||0),0);
+      resList.innerHTML += `<div class="summary-row" style="padding-left:8px;"><span class="label" style="color:${pColor};font-weight:600;">${pLabel} (${grp[pKey].length})</span><span class="value" style="color:${pColor};">€${secTotal.toFixed(0)}</span></div>`;
+      grp[pKey].forEach(r => {
+        const perPerson = r.precio > 0 && r.personas > 1 ? `€${(r.precio/r.personas).toFixed(0)}/pers` : '';
         const meta = [
-          r.personas > 1 ? `👥 ${r.personas}` : '',
-          r.whoPaid    ? `pagó ${r.whoPaid}` : '',
-          r.installments > 1 ? `${r.installments} cuotas` : '',
-          r.payDue     ? `vence ${r.payDue}` : '',
+          r.personas > 1   ? `👥 ${r.personas}` : '',
+          r.whoPaid        ? `pagó ${r.whoPaid}` : '',
+          r.installments>1 ? `${r.installments} cuotas` : '',
+          r.payDue         ? `vence ${r.payDue}` : '',
         ].filter(Boolean).join(' · ');
         resList.innerHTML += `
-          <div class="summary-row" style="padding-left:16px;border-bottom:none;padding-bottom:4px;align-items:flex-start;">
+          <div class="summary-row" style="padding-left:20px;border-bottom:none;padding-bottom:4px;align-items:flex-start;">
             <span class="label" style="font-size:0.82rem;">
               ${r.nombre} · ${r.ciudad}
-              ${meta ? `<span style="display:block;font-size:0.75rem;color:var(--text-dim);margin-top:1px;">${meta}</span>` : ''}
+              ${meta?`<span style="display:block;font-size:0.75rem;color:var(--text-dim);margin-top:1px;">${meta}</span>`:''}
             </span>
             <span class="value" style="font-size:0.82rem;text-align:right;">
-              ${r.precio > 0 ? `€${Number(r.precio).toFixed(0)}` : '—'}
-              ${perPerson ? `<span style="display:block;font-size:0.72rem;color:var(--text-dim);">${perPerson}</span>` : ''}
+              ${r.precio>0?`€${Number(r.precio).toFixed(0)}`:'—'}
+              ${perPerson?`<span style="display:block;font-size:0.72rem;color:var(--text-dim);">${perPerson}</span>`:''}
             </span>
           </div>`;
       });
     });
+  });
   resList.innerHTML += `
-    <div class="summary-row" style="margin-top:12px;padding-top:12px;border-top:2px solid var(--work);">
+    <div class="summary-row" style="margin-top:14px;padding-top:12px;border-top:2px solid var(--work);">
       <span class="label" style="color:var(--work);font-weight:700;">FALTA POR PAGAR</span>
       <span class="value" style="color:var(--work);font-size:1.1rem;">€${totalPending.toFixed(0)}</span>
     </div>
@@ -2051,12 +2110,13 @@ function renderReservations() {
             ${res.personas?`👥 ${res.personas} persona${res.personas>1?'s':''}`:''}
             ${res.precio>0?`&nbsp;·&nbsp;💰 <strong style="color:var(--accent)">€${Number(res.precio).toFixed(0)}</strong>`:''}
           </div>
-          ${res.payStatus?`<div class="res-card-row" style="margin-top:6px;flex-wrap:wrap;gap:6px;">
-            <span class="pay-badge ${res.payStatus}">${res.payStatus==='paid'?'✅ Pagado':res.payStatus==='topay'?'📅 Por pagar':'❌ Sin pagar'}</span>
+          <div class="res-card-row" style="margin-top:6px;flex-wrap:wrap;gap:6px;">
+            ${res.tipo?`<span class="tipo-badge ${res.tipo}">${res.tipo==='Alojamiento'?'🏨':res.tipo==='Transporte'?'🚆':'🏛️'} ${res.tipo}</span>`:''}
+            ${res.payStatus?`<span class="pay-badge ${res.payStatus}">${res.payStatus==='paid'?'✅ Pagado':res.payStatus==='topay'?'📅 Por pagar':'❌ Sin pagar'}</span>`:''}
             ${res.payStatus==='paid'&&res.whoPaid?`<span style="font-size:0.78rem;color:var(--text-dim);">por ${res.whoPaid}</span>`:''}
             ${res.payStatus==='paid'&&res.installments>1?`<span style="font-size:0.78rem;color:var(--text-dim);">${res.installments} cuotas</span>`:''}
-            ${res.payStatus==='topay'&&res.payDue?`<span style="font-size:0.78rem;color:var(--work);">vence ${res.payDue}</span>`:''}
-          </div>`:''}`;
+            ${res.payDue?`<span style="font-size:0.78rem;color:var(--work);">vence ${res.payDue}</span>`:''}
+          </div>`;
         card.querySelector('.edit-res').onclick = () => openResModal({reservation:res, index:idx});
         card.querySelector('.del-res').onclick = async () => {
           if (!confirm(`¿Eliminar "${res.nombre}"?`)) return;
@@ -2196,7 +2256,10 @@ function openModal({record, index, fecha, dia, ciudad}) {
   document.getElementById('fPresupuesto').value= record ? (record.presupuesto||0) : 0;
   document.getElementById('fFecha').value      = isoDate;
   document.getElementById('fDia').value        = getDayName(isoDate) || (record?record.dia||'':dia||'');
+  document.getElementById('fCiudad').value     = record ? (record.ciudad || '') : (ciudad || '');
   document.getElementById('fNotas').value      = record ? (record.notas||'') : '';
+  populateCiudadDatalist();
+  document.getElementById('fCiudad').dispatchEvent(new Event('input'));
   modalCtx = { id:record?record.id:null, ciudad:record?record.ciudad:ciudad, coords:record?record.coords:null, vacaciones:record?(record.vacaciones||'No'):'No' };
   document.getElementById('modalOverlay').classList.remove('hidden');
   setTimeout(() => document.getElementById('fActividad').focus(), 60);
@@ -2220,8 +2283,8 @@ async function saveModal() {
     dia:         getDayName(isoDate),
     notas:       document.getElementById('fNotas').value.trim(),
     vacaciones:  modalCtx.vacaciones,
-    ciudad:      modalCtx.ciudad || '',
-    coords:      modalCtx.coords || null
+    ciudad:      document.getElementById('fCiudad').value.trim() || modalCtx.ciudad || '',
+    coords:      DATA.cityCoords[document.getElementById('fCiudad').value.trim()] || modalCtx.coords || null
   };
   try {
     if (modalEditIndex !== null) {
@@ -2233,6 +2296,7 @@ async function saveModal() {
       DATA.records.push(inserted ? {...record, id:inserted.id} : record);
     }
     sortRecords();
+    discoverCities();
     closeModal();
     rerender(); renderCityGrid();
     if (currentView === 'summary') renderSummary();
@@ -2243,15 +2307,18 @@ document.getElementById('btnCancel').onclick   = closeModal;
 document.getElementById('btnSave').onclick     = saveModal;
 document.getElementById('btnDelete').onclick   = async () => {
   if (modalEditIndex === null || !confirm('¿Eliminar esta actividad?')) return;
+  const ex = DATA.records[modalEditIndex];
   try {
-    const ex = DATA.records[modalEditIndex];
     if (ex.id) await dbDeleteActivity(ex.id);
-    DATA.records.splice(modalEditIndex, 1);
-    closeModal();
-    rerender();
-    renderCityGrid();
-    if (currentView === 'summary') renderSummary();
-  } catch(err) { alert('Error: ' + err.message); }
+  } catch(err) {
+    alert('No se pudo eliminar de Supabase. Ejecuta en el SQL Editor:\n\nCREATE POLICY "allow_delete" ON actividades FOR DELETE USING (true);\n\nError: ' + err.message);
+    return;
+  }
+  DATA.records.splice(modalEditIndex, 1);
+  closeModal();
+  rerender();
+  renderCityGrid();
+  if (currentView === 'summary') renderSummary();
 };
 document.getElementById('modalOverlay').onclick = e => {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
@@ -2259,6 +2326,63 @@ document.getElementById('modalOverlay').onclick = e => {
 document.getElementById('fFecha').addEventListener('change', e => {
   document.getElementById('fDia').value = getDayName(e.target.value);
 });
+async function geocodeCity(cityName) {
+  const hint = document.getElementById('fCiudadHint');
+  const input = document.getElementById('fCiudad');
+  if (input.value.trim() !== cityName) return; // user already changed input
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityName)}&format=json&limit=1&addressdetails=0&accept-language=es`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (input.value.trim() !== cityName) return; // stale check
+    if (data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
+      DATA.cityCoords[cityName] = [lat, lon];
+      hint.textContent = `📍 ${lat.toFixed(4)}, ${lon.toFixed(4)} — ¡coordenadas encontradas! ✓`;
+      hint.style.color = 'var(--vacation)';
+      populateCiudadDatalist();
+    } else {
+      hint.textContent = '❌ Ciudad no encontrada en OpenStreetMap. Continuará sin pin en el mapa.';
+      hint.style.color = '#ef4444';
+    }
+  } catch(err) {
+    if (input.value.trim() !== cityName) return;
+    hint.textContent = '⚠️ Error al buscar coordenadas. Continuará sin pin en el mapa.';
+    hint.style.color = 'var(--work)';
+  }
+}
+
+document.getElementById('fCiudad').addEventListener('input', e => {
+  const city = e.target.value.trim();
+  const hint = document.getElementById('fCiudadHint');
+  clearTimeout(geocodeTimer);
+  if (!city) { hint.textContent = ''; return; }
+  const coords = DATA.cityCoords[city];
+  if (coords) {
+    hint.textContent = `📍 ${coords[0].toFixed(4)}, ${coords[1].toFixed(4)} — coordenadas auto-asignadas`;
+    hint.style.color = 'var(--vacation)';
+    return;
+  }
+  hint.textContent = '🔍 Buscando coordenadas...';
+  hint.style.color = 'var(--text-dim)';
+  geocodeTimer = setTimeout(() => geocodeCity(city), 700);
+});
+function populateCiudadDatalist() {
+  const dl = document.getElementById('ciudadesList');
+  if (!dl) return;
+  dl.innerHTML = '';
+  DATA.cityOrder.forEach(city => {
+    const opt = document.createElement('option');
+    opt.value = city;
+    if (DATA.cityCoords[city]) {
+      const [lat, lng] = DATA.cityCoords[city];
+      opt.label = `📍 ${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+    }
+    dl.appendChild(opt);
+  });
+}
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeModal(); closeResModal(); }
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -2270,7 +2394,6 @@ document.addEventListener('keydown', e => {
 // ── Reservation modal ─────────────────────────────────────────────────────────
 function updatePayFields(status) {
   document.getElementById('rPayPaidFields').classList.toggle('hidden', status !== 'paid');
-  document.getElementById('rPayToPayFields').classList.toggle('hidden', status !== 'topay');
 }
 document.getElementById('rPayStatus').onchange = e => updatePayFields(e.target.value);
 
@@ -2289,6 +2412,7 @@ function openResModal({reservation, index, ciudad}) {
   document.getElementById('rFecha').value        = reservation?(reservation.fecha         ||''):'';
   document.getElementById('rCheckin').value      = reservation?(reservation.checkin       ||''):'';
   document.getElementById('rCheckout').value     = reservation?(reservation.checkout      ||''):'';
+  document.getElementById('rTipo').value         = reservation?(reservation.tipo          ||'Alojamiento'):'Alojamiento';
   document.getElementById('rPayStatus').value    = reservation?(reservation.payStatus     ||''):'';
   document.getElementById('rWhoPaid').value      = reservation?(reservation.whoPaid       ||''):'';
   document.getElementById('rInstallments').value = reservation?(reservation.installments  ||''):'';
@@ -2323,10 +2447,11 @@ async function saveResModal() {
     fecha:        document.getElementById('rFecha').value,
     checkin:      document.getElementById('rCheckin').value,
     checkout:     document.getElementById('rCheckout').value,
+    tipo:         document.getElementById('rTipo').value,
     payStatus:    document.getElementById('rPayStatus').value,
     whoPaid:      document.getElementById('rWhoPaid').value.trim(),
     installments: parseInt(document.getElementById('rInstallments').value) || null,
-    payDue:       document.getElementById('rPayDue').value
+    payDue:       document.getElementById('rPayDue').value || null
   };
   try {
     if (resModalIdx !== null) {
