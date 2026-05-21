@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Europa 2026 · Valeria</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --bg: #0f1419;
+    --surface: #1a2028;
+    --surface-2: #232a35;
+    --border: #2d3441;
+    --text: #e8ecf1;
+    --text-dim: #9aa4b2;
+    --accent: #ff7849;
+    --accent-soft: #ff784920;
+    --work: #f7c948;
+    --vacation: #46c47c;
+    --food: #ec407a;
+    --tourism: #5db8ff;
+    --transport: #b388ff;
+    --rest: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  header {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #1a2028 0%, #0f1419 100%);
+  }
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  header .sub {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: white;
+  }
+  .tab:hover:not(.active) {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  #map {
+    height: 360px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    background: var(--surface);
+  }
+  .city-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .city-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .city-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .city-card .num {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .city-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .city-card .dates {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+  .city-card .stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .stat-pill {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+  }
+  .stat-pill.budget { color: var(--accent); background: var(--accent-soft); }
+  .stat-pill.work { color: var(--work); background: #f7c94815; }
+  .stat-pill.vacation { color: var(--vacation); background: #46c47c15; }
+
+  /* Timeline view */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .filter-btn {
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .filter-btn:hover:not(.active) {
+    color: var(--text);
+  }
+  .back-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+  }
+  .back-btn:hover { background: var(--surface); }
+
+  .day-group {
+    margin-bottom: 24px;
+  }
+  .day-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--accent);
+  }
+  .day-header .date {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .day-header .dayname {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+  .day-header .vac-badge {
+    margin-left: auto;
+    background: var(--vacation);
+    color: #0f1419;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .activity {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+  }
+  .activity.work {
+    border-left-color: var(--work);
+    background: #f7c94808;
+  }
+  .activity.food { border-left-color: var(--food); }
+  .activity.tourism { border-left-color: var(--tourism); }
+  .activity.transport { border-left-color: var(--transport); }
+  .activity.rest { border-left-color: var(--rest); }
+
+  .activity-head {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .time {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.85rem;
+    min-width: 110px;
+  }
+  .activity.work .time { color: var(--work); }
+  .title {
+    flex: 1;
+    font-weight: 500;
+    min-width: 200px;
+  }
+  .activity-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .meta-item { display: flex; align-items: center; gap: 4px; }
+  .cat-pill {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .notes {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* Summary view */
+  .summary-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .summary-section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-row .label { color: var(--text-dim); }
+  .summary-row .value { font-weight: 600; }
+  .vacation-day {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    border-left: 3px solid var(--vacation);
+  }
+  .vacation-day .date { font-weight: 700; min-width: 90px; }
+  .vacation-day .city { color: var(--text-dim); font-size: 0.9rem; }
+
+  .hidden { display: none; }
+
+  @media (max-width: 640px) {
+    .container { padding: 12px; }
+    header { padding: 16px 12px; }
+    .city-grid { grid-template-columns: 1fr; }
+    #map { height: 280px; }
+    .time { min-width: auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>🌍 Europa 2026 · Valeria</h1>
+    <div class="sub">25 julio (Bogotá) → 20 agosto (Madrid)</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-view="home">🏙️ Ciudades</button>
+    <button class="tab" data-view="timeline">📅 Cronología</button>
+    <button class="tab" data-view="summary">✨ Resumen</button>
+  </div>
+
+  <!-- HOME VIEW: map + city cards -->
+  <div id="view-home">
+    <div id="map"></div>
+    <div class="city-grid" id="cityGrid"></div>
+  </div>
+
+  <!-- TIMELINE VIEW: day by day -->
+  <div id="view-timeline" class="hidden">
+    <button class="back-btn hidden" id="backBtn">← Todas las ciudades</button>
+    <div class="toolbar">
+      <span style="font-size:0.85rem;color:var(--text-dim);margin-right:4px;">Filtros:</span>
+      <button class="filter-btn active" data-filter="all">Todos</button>
+      <button class="filter-btn" data-filter="tourism">🏛️ Turismo</button>
+      <button class="filter-btn" data-filter="food">🍽️ Comida</button>
+      <button class="filter-btn" data-filter="work">💻 Trabajo</button>
+      <button class="filter-btn" data-filter="transport">🚆 Transporte</button>
+      <button class="filter-btn" data-filter="rest">😴 Descanso</button>
+    </div>
+    <div id="timeline"></div>
+  </div>
+
+  <!-- SUMMARY VIEW: budget + vacations -->
+  <div id="view-summary" class="hidden">
+    <div class="summary-section">
+      <h2>💰 Presupuesto por ciudad</h2>
+      <div id="budgetList"></div>
+    </div>
+    <div class="summary-section">
+      <h2>🏖️ Días de vacaciones</h2>
+      <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Días marcados como vacaciones (sin trabajo remoto):</p>
+      <div id="vacationList"></div>
+    </div>
+    <div class="summary-section">
+      <h2>💻 Bloques de trabajo remoto</h2>
+      <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Horarios marcados como trabajo (3pm-7pm COL aprox):</p>
+      <div id="workList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const DATA = {"cityOrder": ["Madrid", "Alicante", "Barcelona", "París", "Bruselas", "Ámsterdam", "Milán", "Venecia", "Florencia", "Nápoles", "Roma"], "cityCoords": {"Madrid": [40.4168, -3.7038], "Alicante": [38.3452, -0.481], "Barcelona": [41.3851, 2.1734], "París": [48.8566, 2.3522], "Bruselas": [50.8503, 4.3517], "Ámsterdam": [52.3676, 4.9041], "Milán": [45.4642, 9.19], "Venecia": [45.4408, 12.3155], "Florencia": [43.7696, 11.2558], "Nápoles": [40.8518, 14.2681], "Roma": [41.9028, 12.4964]}, "records": [{"fecha": "25-Jul", "dia": "Sábado", "ciudad": "Vuelo", "horario": "Todo el día", "actividad": "Vuelo a Madrid (BOG→MAD)", "categoria": "TRANSPORTE", "transporte": "Avión", "tiempo": "10-12h", "presupuesto": 0.0, "notas": "Duerme en el avión si es nocturno. Hidrátate.", "vacaciones": "No"}, {"fecha": "26-Jul", "dia": "Domingo", "ciudad": "Madrid", "horario": "05:15-07:00", "actividad": "Llegada MAD, inmigración, recoger equipaje", "categoria": "TRANSPORTE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Compra eSIM Holafly antes de salir del aeropuerto.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "26-Jul", "dia": "Domingo", "ciudad": "Madrid", "horario": "07:00-08:00", "actividad": "Metro/Cercanías MAD aeropuerto → Atocha", "categoria": "TRANSPORTE", "transporte": "Metro/Cercanías", "tiempo": "45min", "presupuesto": 5.0, "notas": "Cercanías C1 directo Atocha. Más barato que taxi.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "26-Jul", "dia": "Domingo", "ciudad": "Madrid", "horario": "08:00-13:00", "actividad": "Desayuno + caminar Retiro/Atocha (low energy)", "categoria": "TURISMO", "transporte": "A pie", "tiempo": "4h", "presupuesto": 15.0, "notas": "Café con tostada típico 3-4€. Guarda equipaje en Atocha (luggage lockers 6€).", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "26-Jul", "dia": "Domingo", "ciudad": "Madrid", "horario": "14:15-16:44", "actividad": "Tren AVE Madrid → Alicante", "categoria": "TRANSPORTE", "transporte": "Tren AVE", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Estación Atocha. Llega 30min antes. Asiento ventana lado derecho = vista campo.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "26-Jul", "dia": "Domingo", "ciudad": "Alicante", "horario": "17:00-19:00", "actividad": "Check-in alojamiento + descanso", "categoria": "DESCANSO", "transporte": "A pie/Bus", "tiempo": "2h", "presupuesto": 0.0, "notas": "Zona recomendada: Centro/Casco Antiguo o cerca Mercado Central.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "26-Jul", "dia": "Domingo", "ciudad": "Alicante", "horario": "19:00-22:00", "actividad": "Cena ligera + paseo Explanada de España", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "3h", "presupuesto": 0.0, "notas": "Tapas en El Barrio. Cerveza 1.50-2.50€. Es domingo, todo más tranquilo.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "26-Jul", "dia": "Domingo", "ciudad": "Alicante", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO (3pm-7pm COL)", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "WIFI", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "26-Jul", "dia": "Domingo", "ciudad": "Alicante", "horario": "02:00-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "Sueño post-trabajo. Habitación con buen aislamiento.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "27-Jul", "dia": "Lunes", "ciudad": "Alicante", "horario": "10:00-11:00", "actividad": "Desayuno", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "27-Jul", "dia": "Lunes", "ciudad": "Alicante", "horario": "11:00-13:30", "actividad": "Castillo Santa Bárbara (subida)", "categoria": "TURISMO/HISTÓRICO", "transporte": "A pie + ascensor", "tiempo": "2:30h", "presupuesto": 3.0, "notas": "Ascensor 3€ desde playa Postiguet. Vistas top. Llega antes 12 (calor).", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "27-Jul", "dia": "Lunes", "ciudad": "Alicante", "horario": "13:30-15:00", "actividad": "Almuerzo: arroz al horno o paella", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 14.0, "notas": "Cervecería Sento (icónica de tapas). Evita restaurantes en Explanada.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "27-Jul", "dia": "Lunes", "ciudad": "Alicante", "horario": "15:00-17:30", "actividad": "Casco Antiguo", "categoria": "DESCANSO/TURISMO", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Calle Labradores y Santa Cruz, casas blancas con flores. Foto top.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "27-Jul", "dia": "Lunes", "ciudad": "Alicante", "horario": "17:30-19:30", "actividad": "MARQ - Museo Arqueológico", "categoria": "TURISMO/ARTE", "transporte": "Tram L1 o bus", "tiempo": "2h", "presupuesto": 0.0, "notas": "Premio Mejor Museo Europeo. Lun gratis hasta 19h. 3€ regular.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "27-Jul", "dia": "Lunes", "ciudad": "Alicante", "horario": "19:30-22:00", "actividad": "Cena ", "categoria": "COMIDA/NIGHTLIFE", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Bar Manero o Nou Manolín (clásicos). Cañas 1.50€.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "27-Jul", "dia": "Lunes", "ciudad": "Alicante", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "WIFI", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "27-Jul", "dia": "Lunes", "ciudad": "Alicante", "horario": "02:00-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "28-Jul", "dia": "Martes", "ciudad": "Alicante", "horario": "10:00-11:30", "actividad": "Mercado Central de Alicante", "categoria": "MERCADO/COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 8.0, "notas": "Desayuna ahí. Jamón ibérico, quesos, frutas. Auténtico.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "28-Jul", "dia": "Martes", "ciudad": "Alicante", "horario": "11:30-13:30", "actividad": "Playa Postiguet o San Juan", "categoria": "DESCANSO", "transporte": "A pie / Tram L1", "tiempo": "2h", "presupuesto": 0.0, "notas": "Postiguet = ciudad. San Juan = mejor playa, 20min tram 1.45€.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "28-Jul", "dia": "Martes", "ciudad": "Alicante", "horario": "13:30-15:00", "actividad": "Almuerzo menú del día", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 12.0, "notas": "Menú del día 10-13€ con primero + segundo + postre + bebida. PIDE ESTO.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "28-Jul", "dia": "Martes", "ciudad": "Alicante", "horario": "15:00-17:00", "actividad": "Siesta + descanso", "categoria": "DESCANSO", "transporte": "-", "tiempo": "2h", "presupuesto": 0.0, "notas": "No pelees con el calor 15-17h.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "28-Jul", "dia": "Martes", "ciudad": "Alicante", "horario": "17:00-19:30", "actividad": "TOUR ESTADIO Rico Pérez (Hércules CF)", "categoria": "FÚTBOL/HISTÓRICO", "transporte": "Tram + bus 8 (parada Mercado→Alcoy-Parque Duval)", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Tour gratis si encuentras staff dispuesto. Mundial 1982 sede. Tienda oficial abierta.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "28-Jul", "dia": "Martes", "ciudad": "Alicante", "horario": "19:30-22:00", "actividad": "Cena ", "categoria": "COMIDA/NIGHTLIFE", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Calle San Francisco \"Las Setas\". Bar Carmela tapas baratas.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "28-Jul", "dia": "Martes", "ciudad": "Alicante", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "28-Jul", "dia": "Martes", "ciudad": "Alicante", "horario": "02:00-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "29-Jul", "dia": "Miércoles", "ciudad": "Alicante", "horario": "10:00-12:00", "actividad": "Día relajado: thrift en Calle Castaños", "categoria": "SHOPPING/VINTAGE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Tiendas vintage zona Mercado Central y Calle Castaños. Humana es low cost.", "vacaciones": "Si", "coords": [38.3452, -0.481]}, {"fecha": "29-Jul", "dia": "Miércoles", "ciudad": "Alicante", "horario": "12:00-14:00", "actividad": "Museo de Bellas Artes Gravina (MUBAG)", "categoria": "ARTE/MUSEO", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "GRATIS. Casa palacio s.XVIII. Pintura alicantina s.XIX.", "vacaciones": "Si", "coords": [38.3452, -0.481]}, {"fecha": "29-Jul", "dia": "Miércoles", "ciudad": "Alicante", "horario": "14:00-15:30", "actividad": "Almuerzo menú del día", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 12.0, "notas": "", "vacaciones": "Si", "coords": [38.3452, -0.481]}, {"fecha": "29-Jul", "dia": "Miércoles", "ciudad": "Alicante", "horario": "15:30-17:30", "actividad": "Siesta", "categoria": "DESCANSO", "transporte": "-", "tiempo": "2h", "presupuesto": 0.0, "notas": "", "vacaciones": "Si", "coords": [38.3452, -0.481]}, {"fecha": "29-Jul", "dia": "Miércoles", "ciudad": "Alicante", "horario": "17:30-21:00", "actividad": "Tabarca: ferry isla + atardecer", "categoria": "TURISMO/NATURA", "transporte": "Ferry", "tiempo": "3:30h", "presupuesto": 20.0, "notas": "Ferry desde puerto 17€ ida-vuelta. Última hora 19h. Si no, paseo puerto.", "vacaciones": "Si", "coords": [38.3452, -0.481]}, {"fecha": "29-Jul", "dia": "Miércoles", "ciudad": "Alicante", "horario": "21:00-22:00", "actividad": "Cena rápida", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1h", "presupuesto": 12.0, "notas": "", "vacaciones": "Si", "coords": [38.3452, -0.481]}, {"fecha": "29-Jul", "dia": "Miércoles", "ciudad": "Alicante", "horario": "22:00-02:00", "actividad": "VACACIONES", "categoria": "VACACIONES", "transporte": "-", "tiempo": "-", "presupuesto": 0.0, "notas": "", "vacaciones": "Si", "coords": [38.3452, -0.481]}, {"fecha": "29-Jul", "dia": "Miércoles", "ciudad": "Alicante", "horario": "02:00-03:00", "actividad": "Bus/taxi al aeropuerto", "categoria": "TRANSPORTE", "transporte": "-", "tiempo": "30min", "presupuesto": 0.0, "notas": "", "vacaciones": "Si", "coords": [38.3452, -0.481]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Vuelo", "horario": "04:45-07:45", "actividad": "Vuelo Alicante → Barcelona", "categoria": "TRANSPORTE", "transporte": "Avión", "tiempo": "7:45h", "presupuesto": 0.0, "notas": "", "vacaciones": "No"}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "07:45-09:30", "actividad": "Aeropuerto El Prat → centro BCN", "categoria": "TRANSPORTE", "transporte": "Aerobús A1/A2", "tiempo": "1:45h", "presupuesto": 7.25, "notas": "A1 desde T1, A2 desde T2. Llega Plaza Catalunya cada 5min", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "09:30-11:00", "actividad": "Desayuno fuerte + café (recuperar)", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 5.0, "notas": "Granja Petitbo o Federal Café Gracia. Hostel suele permitir dejar maletas antes del check-in", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "11:00-14:00", "actividad": "SAGRADA FAMILIA (RESERVA ANTICIPADA)", "categoria": "ARQUITECTURA/HISTÓRICO", "transporte": "Metro L2/L5", "tiempo": "3h", "presupuesto": 26.0, "notas": "RESERVA 3+ semanas antes en sagradafamilia.org. Sin torre 26€, con torre 36€.", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "14:00-16:00", "actividad": "Check-in + almuerzo + descanso", "categoria": "DESCANSO", "transporte": "-", "tiempo": "2h", "presupuesto": 15.0, "notas": "Zonas top: Gracia (joven, vintage), El Born (centro), Gótico (turístico).", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "16:00-18:30", "actividad": "Paseo Gótico + Catedral + Plaza Rey", "categoria": "TURISMO/HISTÓRICO", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Catedral gratis fuera horarios misa. Solo paseo, ahorra energía.", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "18:30-20:30", "actividad": "Tapas tempranas Plaça del Pi", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 18.0, "notas": "Bormuth (Born) o La Plata (Gótico) clásicos. Vermut 3€.", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "20:30-23:00", "actividad": "DESCANSO previo al trabajo", "categoria": "DESCANSO", "transporte": "-", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Hoy trabajas 11pm-4am (jueves)!", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "23:00-04:00", "actividad": "TRABAJO REMOTO (4pm-9pm COL)", "categoria": "TRABAJO", "transporte": "-", "tiempo": "5h", "presupuesto": 0.0, "notas": "Jueves = horario más largo. Cafeína controlada.", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "30-Jul", "dia": "Jueves", "ciudad": "Barcelona", "horario": "04:00-11:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "31-Jul", "dia": "Viernes", "ciudad": "Barcelona", "horario": "11:00-12:00", "actividad": "Brunch + café Gracia", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1h", "presupuesto": 5.0, "notas": "Federal Café, Granja Petitbo, o Brunch & Cake (cuidado fila).", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "31-Jul", "dia": "Viernes", "ciudad": "Barcelona", "horario": "12:00-14:30", "actividad": "Park Güell (entrada timed)", "categoria": "PARQUE/ARQUITECTURA", "transporte": "Metro L3 + bus 24", "tiempo": "2:30h", "presupuesto": 18.0, "notas": "Reserva online. Atardecer = mágico pero más concurrido.", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "31-Jul", "dia": "Viernes", "ciudad": "Barcelona", "horario": "14:30-16:00", "actividad": "Almuerzo zona Gracia", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 14.0, "notas": "Menú del día en bares barrio. ", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "31-Jul", "dia": "Viernes", "ciudad": "Barcelona", "horario": "16:00-18:30", "actividad": "Descanso", "categoria": "DESCANSO", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "31-Jul", "dia": "Viernes", "ciudad": "Barcelona", "horario": "18:30-20:30", "actividad": "Camp Nou (tour si abierto)", "categoria": "FÚTBOL", "transporte": "Metro L3 Palau Reial", "tiempo": "2h", "presupuesto": 30.0, "notas": "OJO: en obras hasta 2026. Verifica spotify-camp-nou.com antes. Si cerrado, ver desde fuera.", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "31-Jul", "dia": "Viernes", "ciudad": "Barcelona", "horario": "20:30-22:00", "actividad": "Cena tapas El Born", "categoria": "COMIDA", "transporte": "Metro", "tiempo": "1:30h", "presupuesto": 22.0, "notas": "Cal Pep, Bar del Pla, o El Xampanyet (clásico). Reserva.", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "31-Jul", "dia": "Viernes", "ciudad": "Barcelona", "horario": "22:00-02:00", "actividad": "Dormir", "categoria": "-", "transporte": "-", "tiempo": "-", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "31-Jul", "dia": "Viernes", "ciudad": "Barcelona", "horario": "02:00-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "Empaca! Vuelo París 6:45am.", "vacaciones": "No", "coords": [41.3851, 2.1734]}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "Vuelo", "horario": "04:30-06:45", "actividad": "Aeropuerto + check-in BCN", "categoria": "TRANSPORTE", "transporte": "Aerobús A1", "tiempo": "2:15h", "presupuesto": 7.25, "notas": "Aerobús nocturno N17 desde Plaça Catalunya cada 20min.", "vacaciones": "No"}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "Vuelo", "horario": "06:45-08:45", "actividad": "Vuelo BCN → París (CDG/Orly)", "categoria": "TRANSPORTE", "transporte": "Avión", "tiempo": "2h", "presupuesto": 0.0, "notas": "", "vacaciones": "No"}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "París", "horario": "08:45-11:00", "actividad": "Aeropuerto → centro París", "categoria": "TRANSPORTE", "transporte": "RER B (CDG) / OrlyBus", "tiempo": "1:30h", "presupuesto": 11.8, "notas": "CDG: RER B 11.80€ a Châtelet. Orly: OrlyBus 11.50€ a Denfert.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "París", "horario": "11:00-13:00", "actividad": "Check-in + descanso fuerte", "categoria": "DESCANSO", "transporte": "-", "tiempo": "2h", "presupuesto": 0.0, "notas": "Zonas top low-mid: Belleville, Le Marais, Pigalle/SoPi, République, Latin Quarter.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "París", "horario": "13:00-14:30", "actividad": "Almuerzo bistro o boulangerie", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 15.0, "notas": "Menú midi 13-18€. Boulangerie sandwich+pastel+bebida 8-10€.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "París", "horario": "14:30-18:00", "actividad": "Île de la Cité + Notre-Dame (fuera) + Sainte-Chapelle", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "Metro/A pie", "tiempo": "3:30h", "presupuesto": 13.0, "notas": "Sainte-Chapelle 13€ (vidrieras espectaculares). Notre-Dame: ya reabierta, reserva slot gratis.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "París", "horario": "18:00-20:00", "actividad": "Le Marais paseo + vintage", "categoria": "VINTAGE/HISTÓRICO", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Free n Star, Kilo Shop, Episode. Calle Vieille du Temple.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "París", "horario": "20:00-22:00", "actividad": "Cena Marais o Belleville", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 22.0, "notas": "L'As du Fallafel (legendario 8€). Chez Janou cocina provenzal.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "París", "horario": "22:00-23:30", "actividad": "Torre Eiffel (lights show 22h, 23h)", "categoria": "TURISMO", "transporte": "Metro Bir-Hakeim", "tiempo": "1:30h", "presupuesto": 0.0, "notas": "Mejor desde Trocadéro o Champ de Mars. Centelleo 5min cada hora.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "1-Ago", "dia": "Sábado", "ciudad": "París", "horario": "23:30-08:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "8h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "08:00-09:30", "actividad": "Croissant + café", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 7.0, "notas": "Du Pain et des Idées (Canal Saint-Martin) - mejor boulangerie.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "09:30-13:00", "actividad": "LOUVRE (RESERVA OBLIGATORIA)", "categoria": "ARTE/MUSEO", "transporte": "Metro Palais-Royal", "tiempo": "3:30h", "presupuesto": 22.0, "notas": "Entra apenas abren 9h. Reserva en louvre.fr 3 semanas antes. Foco: Mona Lisa, Venus, Nike.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "13:00-14:30", "actividad": "Almuerzo Jardín Tuileries / Saint-Germain", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 15.0, "notas": "", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "14:30-17:00", "actividad": "Estadio PSG", "categoria": "FÚTBOL", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 17.0, "notas": "", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "17:00-19:00", "actividad": "Quartier Latin + Panthéon (fuera)", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Calle Mouffetard. Mercado domingo mañana (perdiste). Shakespeare & Co librería.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "19:00-21:00", "actividad": "Apéro + cena cerca Canal Saint-Martin", "categoria": "COMIDA/NIGHTLIFE", "transporte": "Metro", "tiempo": "2h", "presupuesto": 22.0, "notas": "Pink Flamingo pizza, Le Comptoir Général.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "21:00-22:00", "actividad": "Descanso pre-trabajo", "categoria": "DESCANSO", "transporte": "-", "tiempo": "1h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "2-Ago", "dia": "Domingo", "ciudad": "París", "horario": "02:00-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "3-Ago", "dia": "Lunes", "ciudad": "París", "horario": "10:00-12:00", "actividad": "Montmartre + Sacré-Cœur", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "Metro Anvers", "tiempo": "2h", "presupuesto": 0.0, "notas": "Sacré-Cœur GRATIS. Plaza Tertre artistas. Foto desde escalinata.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "3-Ago", "dia": "Lunes", "ciudad": "París", "horario": "12:00-13:30", "actividad": "Almuerzo + último crepe", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 12.0, "notas": "Crêperie Brocéliande o tradicional.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "3-Ago", "dia": "Lunes", "ciudad": "París", "horario": "13:30-15:30", "actividad": "Champs-Élysées + Arco Triunfo (fuera)", "categoria": "TURISMO", "transporte": "Metro", "tiempo": "2h", "presupuesto": 0.0, "notas": "Solo paseo. Arco subida 16€ (skip, ahorra para Roma).", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "3-Ago", "dia": "Lunes", "ciudad": "París", "horario": "15:30-17:00", "actividad": "Empacar + descansar antes bus", "categoria": "DESCANSO", "transporte": "-", "tiempo": "1:30h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "3-Ago", "dia": "Lunes", "ciudad": "París", "horario": "17:00-18:00", "actividad": "Llegada estación bus (Bercy Seine o Porte Maillot)", "categoria": "TRANSPORTE", "transporte": "Metro", "tiempo": "1h", "presupuesto": 5.0, "notas": "Verifica terminal del bus. Llega 30min antes.", "vacaciones": "No", "coords": [48.8566, 2.3522]}, {"fecha": "3-Ago", "dia": "Lunes", "ciudad": "París", "horario": "18:00-22:00", "actividad": "Bus París → Bruselas (FlixBus/BlaBla)", "categoria": "TRANSPORTE", "transporte": "Bus", "tiempo": "4h", "presupuesto": 0.0, "notas": "⚠️ TRABAJO EN BUS imposible: WiFi flojo en bus. PIDE VACACIONES este día o ajusta.", "vacaciones": "Si", "coords": [48.8566, 2.3522]}, {"fecha": "3-Ago", "dia": "Lunes", "ciudad": "Bruselas", "horario": "22:00-23:00", "actividad": "Llegada Bruselas-Nord, check-in", "categoria": "TRANSPORTE", "transporte": "Metro/A pie", "tiempo": "1h", "presupuesto": 5.0, "notas": "", "vacaciones": "Si", "coords": [50.8503, 4.3517]}, {"fecha": "3-Ago", "dia": "Lunes", "ciudad": "Bruselas", "horario": "23:00-08:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "9h", "presupuesto": 0.0, "notas": "", "vacaciones": "Si", "coords": [50.8503, 4.3517]}, {"fecha": "4-Ago", "dia": "Martes", "ciudad": "Bruselas", "horario": "09:00-10:30", "actividad": "Desayuno waffle + café", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 8.0, "notas": "Maison Dandoy waffle de Bruselas 4€. NO comprar waffle Liège a vendedores plaza.", "vacaciones": "No", "coords": [50.8503, 4.3517]}, {"fecha": "4-Ago", "dia": "Martes", "ciudad": "Bruselas", "horario": "10:30-12:30", "actividad": "Grand Place + Manneken Pis + chocolatería", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 5.0, "notas": "Grand Place: una de las plazas más bellas Europa. Chocolaterías Mary, Neuhaus.", "vacaciones": "No", "coords": [50.8503, 4.3517]}, {"fecha": "4-Ago", "dia": "Martes", "ciudad": "Bruselas", "horario": "12:30-14:00", "actividad": "Almuerzo: moules-frites o stoemp", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 18.0, "notas": "Chez Léon (turístico pero icono) o Fin de Siècle (local).", "vacaciones": "No", "coords": [50.8503, 4.3517]}, {"fecha": "4-Ago", "dia": "Martes", "ciudad": "Bruselas", "horario": "14:00-16:30", "actividad": "MUSEO MAGRITTE + Belgian Royal Museum", "categoria": "ARTE/MUSEO", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 15.0, "notas": "Combo 15€. Magritte = top imprescindible.", "vacaciones": "No", "coords": [50.8503, 4.3517]}, {"fecha": "4-Ago", "dia": "Martes", "ciudad": "Bruselas", "horario": "16:30-18:30", "actividad": "Sablon + galería antigüedades vintage", "categoria": "VINTAGE/HISTÓRICO", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Place du Grand Sablon mercado fin de semana. Galería real Saint-Hubert.", "vacaciones": "No", "coords": [50.8503, 4.3517]}, {"fecha": "4-Ago", "dia": "Martes", "ciudad": "Bruselas", "horario": "18:30-21:00", "actividad": "Cena + cervezas Saint-Géry/Saint-Gilles", "categoria": "COMIDA/NIGHTLIFE", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 25.0, "notas": "Délirium Café (record Guinness por cervezas). Lambic, gueuze, kriek imprescindibles 4-7€.", "vacaciones": "Si", "coords": [50.8503, 4.3517]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Bus", "horario": "01:55-05:35", "actividad": "Bus Bruselas → Ámsterdam", "categoria": "TRANSPORTE", "transporte": "Bus", "tiempo": "3:40h", "presupuesto": 0.0, "notas": "⚠️ VACACIONES OBLIGATORIO. Sin dormir desde día anterior.", "vacaciones": "Si"}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "05:35-08:00", "actividad": "Llegada AMS Sloterdijk + check-in early", "categoria": "TRANSPORTE/DESCANSO", "transporte": "Tren urbano", "tiempo": "2:30h", "presupuesto": 5.0, "notas": "Zonas: Jordaan (precioso, caro), De Pijp (joven, vintage, mercados), Oost (alternativo).", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "08:00-13:00", "actividad": "DORMIR ZOMBIE MODE", "categoria": "DORMIR", "transporte": "-", "tiempo": "5h", "presupuesto": 0.0, "notas": "Recuperación crítica.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "13:00-14:30", "actividad": "Almuerzo broodje + stroopwafel fresca", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 12.0, "notas": "Stach Food, Albert Heijn To Go. Stroopwafel fresca Albert Cuyp 2€.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "14:30-16:30", "actividad": "Anne Frank Huis (RESERVA OBLIGATORIA 6+ SEMANAS)", "categoria": "HISTÓRICO/MUSEO", "transporte": "Tram 13/17", "tiempo": "2h", "presupuesto": 16.0, "notas": "⚠️ MÁS URGENTE DE RESERVAR. Se agota meses antes. Si no consigues: NEMO o casa Rembrandt.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "16:30-18:30", "actividad": "Jordaan paseo + canales", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Brouwersgracht (canal más bonito), 9 Streets shopping.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "18:30-20:30", "actividad": "Cena: indonesian rijsttafel o broodje", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 22.0, "notas": "Sampurna (rijsttafel auténtico). Cerveza Heineken local 4€.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "20:30-22:00", "actividad": "Descanso pre-trabajo", "categoria": "DESCANSO", "transporte": "-", "tiempo": "1:30h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "5-Ago", "dia": "Miércoles", "ciudad": "Ámsterdam", "horario": "02:00-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "09:00-10:30", "actividad": "Desayuno + café De Pijp", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 10.0, "notas": "CT Coffee, Bakers & Roasters. Café excelente.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "10:30-13:00", "actividad": "MUSEO VAN GOGH (RESERVA OBLIGATORIA)", "categoria": "ARTE/MUSEO", "transporte": "Tram 2/12", "tiempo": "2:30h", "presupuesto": 22.0, "notas": "Reserva 3+ semanas. Combo Rijksmuseum si quieres ambos (Rijks 25€).", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "13:00-14:30", "actividad": "Almuerzo Museumplein", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 15.0, "notas": "Foodhallen mercado gastronómico cubierto.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "14:30-16:30", "actividad": "Vondelpark + bici (opcional)", "categoria": "PARQUE/DESCANSO", "transporte": "A pie / Bici", "tiempo": "2h", "presupuesto": 0.0, "notas": "Bici 15€/día. MacBike clásico. Atención al carril ciclista (no caminar ahí).", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "16:30-18:30", "actividad": "Albert Cuyp Markt + vintage De Pijp", "categoria": "MERCADO/VINTAGE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Mercado lun-sáb. Vintage en Gerard Doustraat. Bij Ons Vintage.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "18:30-20:30", "actividad": "Cena cervezería + bitterballen", "categoria": "COMIDA/NIGHTLIFE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 22.0, "notas": "Brouwerij 't IJ (molino viejo) cervezas artesanales.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "20:30-23:00", "actividad": "Light cruise canales o paseo Red Light (desde fuera)", "categoria": "TURISMO", "transporte": "A pie/Tour", "tiempo": "2:30h", "presupuesto": 20.0, "notas": "Cruise nocturno 18-25€. O paseo libre Red Light District. NO fotos personas.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "23:00-04:00", "actividad": "TRABAJO REMOTO (jueves 11pm-4am)", "categoria": "TRABAJO", "transporte": "-", "tiempo": "5h", "presupuesto": 0.0, "notas": "Jueves = horario largo.", "vacaciones": "Si", "coords": [52.3676, 4.9041]}, {"fecha": "6-Ago", "dia": "Jueves", "ciudad": "Ámsterdam", "horario": "04:00-07:00", "actividad": "Dormir corto", "categoria": "DORMIR", "transporte": "-", "tiempo": "3h", "presupuesto": 0.0, "notas": "⚠️ Vuelo 8:20am. Sueño cortísimo. CONSIDERA VACACIONES.", "vacaciones": "No", "coords": [52.3676, 4.9041]}, {"fecha": "7-Ago", "dia": "Viernes", "ciudad": "Vuelo", "horario": "07:00-08:20", "actividad": "Aeropuerto AMS Schiphol", "categoria": "TRANSPORTE", "transporte": "Tren", "tiempo": "1:20h", "presupuesto": 5.0, "notas": "VACACIONES OBLIGATORIO. Tren desde Centraal Schiphol 5.50€, 20min.", "vacaciones": "No"}, {"fecha": "7-Ago", "dia": "Viernes", "ciudad": "Vuelo", "horario": "08:20-10:00", "actividad": "Vuelo Ámsterdam → Milán", "categoria": "TRANSPORTE", "transporte": "Avión", "tiempo": "1:40h", "presupuesto": 0.0, "notas": "", "vacaciones": "No"}, {"fecha": "7-Ago", "dia": "Viernes", "ciudad": "Milán", "horario": "10:00-13:00", "actividad": "Llegada Milán + Duomo express", "categoria": "TURISMO/ARQUITECTURA", "transporte": "Malpensa Express + a pie", "tiempo": "3h", "presupuesto": 13.0, "notas": "Tren Malpensa 13€ a Cadorna. Duomo fuera (interior 7€). Galería Vittorio Emanuele.", "vacaciones": "No", "coords": [45.4642, 9.19]}, {"fecha": "7-Ago", "dia": "Viernes", "ciudad": "Milán", "horario": "13:05-16:50", "actividad": "Tren Milán → Venecia", "categoria": "TRANSPORTE", "transporte": "Tren", "tiempo": "3:45h", "presupuesto": 0.0, "notas": "Trenitalia Frecciarossa. Llevarse comida (sandwich 8€ a bordo es caro).", "vacaciones": "No", "coords": [45.4642, 9.19]}, {"fecha": "7-Ago", "dia": "Viernes", "ciudad": "Venecia", "horario": "17:00-18:00", "actividad": "Check-in Venecia", "categoria": "DESCANSO", "transporte": "-", "tiempo": "1h", "presupuesto": 0.0, "notas": "Vaporetto 9.50€ por viaje. Vaporetto pass 24h 25€. Quédate en Cannaregio o Dorsoduro (no San Marco).", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "7-Ago", "dia": "Viernes", "ciudad": "Venecia", "horario": "18:00-20:00", "actividad": "Paseo Cannaregio sin mapa", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "PERDERSE es lo mejor. Gueto judío Cannaregio (primer gueto del mundo).", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "7-Ago", "dia": "Viernes", "ciudad": "Venecia", "horario": "20:00-22:00", "actividad": "Cena cicchetti + spritz", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 20.0, "notas": "All'Arco, Cantine del Vino già Schiavi. Cicchetti 1.50-3€ c/u. Aperol/Hugo 3-4€.", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "7-Ago", "dia": "Viernes", "ciudad": "Venecia", "horario": "22:00-09:00", "actividad": "Dormir LARGO", "categoria": "DORMIR", "transporte": "-", "tiempo": "9h", "presupuesto": 0.0, "notas": "Viernes COL no trabajas. Recupera energía.", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "8-Ago", "dia": "Sábado", "ciudad": "Venecia", "horario": "09:00-10:30", "actividad": "Desayuno + café piazza", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 8.0, "notas": "Café espresso al banco 1.50€. NUNCA sentado en San Marco (12€).", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "8-Ago", "dia": "Sábado", "ciudad": "Venecia", "horario": "10:30-13:00", "actividad": "PLAZA SAN MARCOS + Basílica + Palacio Ducal", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Reserva Palacio Ducal online 30€. Basílica entrada gratis (subida campanario 10€). VE TEMPRANO.", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "8-Ago", "dia": "Sábado", "ciudad": "Venecia", "horario": "13:00-14:30", "actividad": "Almuerzo zona Dorsoduro", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 18.0, "notas": "Lejos San Marco = más barato. Trattoria al Gazzettino.", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "8-Ago", "dia": "Sábado", "ciudad": "Venecia", "horario": "14:30-16:30", "actividad": "Puente Rialto + mercado Rialto + Gallerie Accademia", "categoria": "TURISMO/ARTE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Mercado pescado/fruta mañana mejor. Accademia 15€ pintura veneciana.", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "8-Ago", "dia": "Sábado", "ciudad": "Venecia", "horario": "16:30-19:00", "actividad": "Atardecer Punta della Dogana / Zattere", "categoria": "DESCANSO/TURISMO", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "Mejor atardecer gratis de Venecia. Llévate spritz para llevar.", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "8-Ago", "dia": "Sábado", "ciudad": "Venecia", "horario": "19:15-22:35", "actividad": "Bus Venecia → Florencia (FlixBus)", "categoria": "TRANSPORTE", "transporte": "Bus", "tiempo": "3:20h", "presupuesto": 0.0, "notas": "⚠️ Sábado COL no trabajas. Útil.", "vacaciones": "No", "coords": [45.4408, 12.3155]}, {"fecha": "8-Ago", "dia": "Sábado", "ciudad": "Florencia", "horario": "22:35-23:30", "actividad": "Check-in Florencia", "categoria": "DESCANSO", "transporte": "A pie/Taxi", "tiempo": "1h", "presupuesto": 0.0, "notas": "Zonas: Santo Spirito (vibe local), Centro Storico (turista), San Lorenzo (cerca todo).", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "8-Ago", "dia": "Sábado", "ciudad": "Florencia", "horario": "23:30-08:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "8h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "08:00-09:30", "actividad": "Desayuno cornetto + cappuccino", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 5.0, "notas": "Café al banco 1.50€. Cornetto 1.20€.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "09:30-12:30", "actividad": "GALERÍA UFFIZI (RESERVA OBLIGATORIA)", "categoria": "ARTE/MUSEO", "transporte": "A pie", "tiempo": "3h", "presupuesto": 0.0, "notas": "Reserva 3+ semanas. PRIORIDAD MÁXIMA. Botticelli, Da Vinci, Caravaggio.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "12:30-14:00", "actividad": "Almuerzo: panino All'Antico Vinaio", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 8.0, "notas": "Famoso panino 7-9€. Fila pero rápida. O cualquier trattoria barrio.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "14:00-16:00", "actividad": "Catedral Duomo (fuera) + Bautisterio", "categoria": "ARQUITECTURA/HISTÓRICO", "transporte": "A pie", "tiempo": "2h", "presupuesto": 20.0, "notas": "Combo cúpula+campanario+bautisterio 20€. Reserva slot cúpula.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "16:00-18:00", "actividad": "Galería Academia (David)", "categoria": "ARTE/MUSEO", "transporte": "A pie", "tiempo": "2h", "presupuesto": 16.0, "notas": "Solo el David vale el ticket. Reserva online.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "18:00-20:00", "actividad": "Piazzale Michelangelo atardecer", "categoria": "TURISMO/DESCANSO", "transporte": "A pie / Bus 12", "tiempo": "2h", "presupuesto": 0.0, "notas": "Caminata subida 25min o bus 12. Vista panorámica = top.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "20:00-22:00", "actividad": "Cena trattoria Santo Spirito", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 22.0, "notas": "Trattoria Sabatino (very local), Gusta Pizza. Vino 2-4€ copa.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "9-Ago", "dia": "Domingo", "ciudad": "Florencia", "horario": "02:00-10:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "8h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "10-Ago", "dia": "Lunes", "ciudad": "Florencia", "horario": "10:00-12:00", "actividad": "Mercado Central San Lorenzo + vintage", "categoria": "MERCADO/VINTAGE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 15.0, "notas": "Mercado planta 1 comida + planta 2 food court. Vintage cerca: Street Doing, Boutique Nadine.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "10-Ago", "dia": "Lunes", "ciudad": "Florencia", "horario": "12:00-13:30", "actividad": "Almuerzo mercado", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 12.0, "notas": "Lampredotto sandwich 5-6€ (tripa florentina, típico).", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "10-Ago", "dia": "Lunes", "ciudad": "Florencia", "horario": "13:30-15:30", "actividad": "Ponte Vecchio + Pitti Palace (fuera)", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Ponte Vecchio gratis. Pitti 16€ skip si tiempo justo.", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "10-Ago", "dia": "Lunes", "ciudad": "Florencia", "horario": "15:30-16:30", "actividad": "Empacar", "categoria": "DESCANSO", "transporte": "-", "tiempo": "1h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [43.7696, 11.2558]}, {"fecha": "10-Ago", "dia": "Lunes", "ciudad": "Florencia", "horario": "16:45-23:10", "actividad": "Bus Florencia → Nápoles", "categoria": "TRANSPORTE", "transporte": "Bus", "tiempo": "6:25h", "presupuesto": 0.0, "notas": "⚠️ TRABAJO REMOTO 22-02 = pega bus. PIDE VACACIONES o trabaja en bus si wifi OK.", "vacaciones": "Si", "coords": [43.7696, 11.2558]}, {"fecha": "10-Ago", "dia": "Lunes", "ciudad": "Nápoles", "horario": "23:10-00:30", "actividad": "Llegada Nápoles + taxi alojamiento", "categoria": "TRANSPORTE", "transporte": "Taxi/Bus", "tiempo": "1:20h", "presupuesto": 15.0, "notas": "⚠️ Nápoles noche: no caminar solo zonas turbias. Taxi oficial. Zona segura: Chiaia, Vomero.", "vacaciones": "Si", "coords": [40.8518, 14.2681]}, {"fecha": "10-Ago", "dia": "Lunes", "ciudad": "Nápoles", "horario": "00:30-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "8:30h", "presupuesto": 0.0, "notas": "", "vacaciones": "Si", "coords": [40.8518, 14.2681]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Nápoles", "horario": "09:00-10:30", "actividad": "Sfogliatella + café espresso napolitano", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 6.0, "notas": "Pasticceria Capparelli o Attanasio. Sfogliatella riccia 2€.", "vacaciones": "No", "coords": [40.8518, 14.2681]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Nápoles", "horario": "10:30-13:00", "actividad": "CENTRO HISTÓRICO + Spaccanapoli", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "UNESCO. Via San Gregorio Armeno (artesanos belenes). Iglesias gratis.", "vacaciones": "No", "coords": [40.8518, 14.2681]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Nápoles", "horario": "13:00-14:30", "actividad": "PIZZA NAPOLITANA ORIGINAL", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 8.0, "notas": "⚠️ MOMENTO CULMINANTE. Da Michele (clásica), Sorbillo, Di Matteo. Pizza margherita 5-7€.", "vacaciones": "No", "coords": [40.8518, 14.2681]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Nápoles", "horario": "14:30-16:00", "actividad": "Castel dell'Ovo + paseo Lungomare", "categoria": "HISTÓRICO/TURISMO", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 0.0, "notas": "Castel dell'Ovo entrada gratis. Vista Vesubio.", "vacaciones": "No", "coords": [40.8518, 14.2681]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Nápoles", "horario": "16:00-17:30", "actividad": "Empacar + ir a estación Centrale", "categoria": "DESCANSO", "transporte": "Metro L1", "tiempo": "1:30h", "presupuesto": 2.0, "notas": "", "vacaciones": "No", "coords": [40.8518, 14.2681]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Nápoles", "horario": "20:31-22:34", "actividad": "Tren Nápoles → Roma", "categoria": "TRANSPORTE", "transporte": "Tren", "tiempo": "2h", "presupuesto": 0.0, "notas": "Frecciarossa Roma Termini. ⚠️ Trabajas 22-02, perderás 31min.", "vacaciones": "No", "coords": [40.8518, 14.2681]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Roma", "horario": "22:34-23:30", "actividad": "Llegada Termini + check-in", "categoria": "TRANSPORTE/DESCANSO", "transporte": "Metro/A pie", "tiempo": "1h", "presupuesto": 5.0, "notas": "Zonas: Trastevere (vibe), Monti (céntrico cool), Pigneto (alternativo).", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Roma", "horario": "23:30-02:00", "actividad": "TRABAJO REMOTO (atrasado)", "categoria": "TRABAJO", "transporte": "-", "tiempo": "3:30h", "presupuesto": 0.0, "notas": "⚠️ Considera flex con equipo: trabaja solo 23:30-02 (2.5h en lugar de 4h).", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "11-Ago", "dia": "Martes", "ciudad": "Roma", "horario": "02:00-10:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "10:00-11:00", "actividad": "Desayuno cornetto romano", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1h", "presupuesto": 5.0, "notas": "Roscioli o Marigold. Café espresso al banco 1.20€.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "11:00-14:00", "actividad": "COLISEO + Foro Romano + Palatino (RESERVA)", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "Metro Colosseo", "tiempo": "3h", "presupuesto": 24.0, "notas": "COMBO TICKET 24€. RESERVA 3+ semanas. Entra 11h evita peor calor.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "14:00-15:30", "actividad": "Almuerzo Monti barrio", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 15.0, "notas": "Trattoria Monti, La Carbonara. Pasta carbonara/cacio e pepe IMPRESCINDIBLE.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "15:30-17:30", "actividad": "Siesta italiana", "categoria": "DESCANSO", "transporte": "-", "tiempo": "2h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "17:30-19:30", "actividad": "Panteón + Plaza Navona + Fontana Trevi", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 5.0, "notas": "Panteón ahora 5€ (era gratis). Trevi gratis. NO botar moneda con dos manos (1 mano sobre hombro).", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "19:30-21:30", "actividad": "Cena Trastevere", "categoria": "COMIDA/NIGHTLIFE", "transporte": "A pie / Tram 8", "tiempo": "2h", "presupuesto": 25.0, "notas": "Da Enzo al 29, Tonnarello (más turístico pero bueno). Reservar.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "21:30-22:00", "actividad": "Drinks Trastevere bares", "categoria": "NIGHTLIFE", "transporte": "A pie", "tiempo": "30min", "presupuesto": 8.0, "notas": "Freni e Frizioni cocktails 8€. Aperol spritz 5€.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "12-Ago", "dia": "Miércoles", "ciudad": "Roma", "horario": "02:00-10:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "8h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "10:00-11:00", "actividad": "Café + descanso", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1h", "presupuesto": 5.0, "notas": "", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "11:00-14:30", "actividad": "VATICANO: Museos + Capilla Sixtina (RESERVA)", "categoria": "HISTÓRICO/ARTE", "transporte": "Metro Ottaviano", "tiempo": "3:30h", "presupuesto": 25.0, "notas": "Reserva 3+ semanas. Skip the line vale la pena. Entrada normal 20€ + reserva 5€.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "14:30-15:30", "actividad": "Almuerzo cerca Vaticano", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1h", "presupuesto": 15.0, "notas": "Pizzarium Bonci (al taglio top mundial) o Bonci pizza por peso.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "15:30-17:00", "actividad": "Basílica San Pedro (interior gratis)", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 0.0, "notas": "Subida cúpula 10€. Vale la pena 100%.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "17:00-19:00", "actividad": "Castel Sant'Angelo (fuera) + Borghese paseo (si tiempo)", "categoria": "HISTÓRICO/PARQUE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "Galería Borghese 15€ (RESERVA OBLIGATORIA días antes, agotada agosto).", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "19:00-21:00", "actividad": "Aperitivo + cena Campo de' Fiori", "categoria": "COMIDA/NIGHTLIFE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 22.0, "notas": "Aperitivo italiano: drink + buffet 8-12€. Cul de Sac excelente winebar.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "21:00-22:30", "actividad": "Stadio Olimpico exterior (si fan fútbol)", "categoria": "FÚTBOL", "transporte": "Tranvía/Bus", "tiempo": "1:30h", "presupuesto": 5.0, "notas": "Roma y Lazio juegan ahí. Pretemporada agosto puede tener amistoso. Verifica en sslazio.it / asroma.com.", "vacaciones": "No", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "23:00-04:00", "actividad": "TRABAJO REMOTO (jueves 11pm-4am)", "categoria": "TRABAJO", "transporte": "-", "tiempo": "5h", "presupuesto": 0.0, "notas": "", "vacaciones": "Si", "coords": [41.9028, 12.4964]}, {"fecha": "13-Ago", "dia": "Jueves", "ciudad": "Roma", "horario": "04:00-05:00", "actividad": "Empacar + taxi aeropuerto", "categoria": "TRANSPORTE", "transporte": "Taxi", "tiempo": "1h", "presupuesto": 16.666666666666668, "notas": "⚠️ Vuelo 6am. Taxi Termini-Fiumicino tarifa fija 50€.", "vacaciones": "Si", "coords": [41.9028, 12.4964]}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Vuelo", "horario": "05:00-06:00", "actividad": "Check-in Fiumicino", "categoria": "TRANSPORTE", "transporte": "Aeropuerto", "tiempo": "1h", "presupuesto": 0.0, "notas": "VACACIONES OBLIGATORIO. Ya sin dormir.", "vacaciones": "Si"}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Vuelo", "horario": "06:00-08:40", "actividad": "Vuelo Roma → Madrid", "categoria": "TRANSPORTE", "transporte": "Avión", "tiempo": "2:40h", "presupuesto": 0.0, "notas": "Duerme en avión.", "vacaciones": "No"}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Madrid", "horario": "08:40-11:00", "actividad": "Aeropuerto → Madrid centro + check-in temprano", "categoria": "TRANSPORTE", "transporte": "Metro L8/Cercanías", "tiempo": "2:20h", "presupuesto": 5.0, "notas": "Zonas: Malasaña (joven, vintage), Lavapiés (multicultural), Sol/Gran Vía (céntrico turístico).", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Madrid", "horario": "11:00-14:00", "actividad": "DORMIR/DESCANSO ZOMBIE", "categoria": "DORMIR", "transporte": "-", "tiempo": "3h", "presupuesto": 0.0, "notas": "Crítico recuperar.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Madrid", "horario": "14:00-15:30", "actividad": "Almuerzo bocadillo de calamares", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 10.0, "notas": "Plaza Mayor zona. Bocata calamares = típico madrileño 5-7€.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Madrid", "horario": "15:30-18:00", "actividad": "PRADO o Reina Sofía (elige)", "categoria": "ARTE/MUSEO", "transporte": "Metro Atocha/Banco España", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "PRADO gratis 18-20h. Reina Sofía gratis 19-21h. Si turismo bajo, espera horario gratis.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Madrid", "horario": "18:00-20:00", "actividad": "Retiro + Palacio Cristal", "categoria": "PARQUE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "GRATIS. Lago, paseos, palacio cristal con exposición.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Madrid", "horario": "20:00-22:00", "actividad": "Cena tapas La Latina", "categoria": "COMIDA/NIGHTLIFE", "transporte": "Metro La Latina", "tiempo": "2h", "presupuesto": 22.0, "notas": "Calle Cava Baja = ruta tapas. Casa Lucio (riñones), El Tempranillo (vinos).", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Madrid", "horario": "22:00-01:00", "actividad": "Drinks Malasaña (viernes COL no trabajas)", "categoria": "NIGHTLIFE", "transporte": "Metro Tribunal", "tiempo": "3h", "presupuesto": 20.0, "notas": "Plaza Dos de Mayo, Triskel, El Diablo. Cervezas 2-3€.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "14-Ago", "dia": "Viernes", "ciudad": "Madrid", "horario": "01:00-10:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "9h", "presupuesto": 0.0, "notas": "Empacar mañana. Tren tarde.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "15-Ago", "dia": "Sábado", "ciudad": "Madrid", "horario": "10:00-11:30", "actividad": "Brunch Malasaña", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 12.0, "notas": "Federal Café, Toma Café, Mama Framboise.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "15-Ago", "dia": "Sábado", "ciudad": "Madrid", "horario": "11:30-14:00", "actividad": "BERNABÉU exterior + tour (si abierto) / Estadio Metropolitano", "categoria": "FÚTBOL", "transporte": "Metro L10 Bernabéu", "tiempo": "2:30h", "presupuesto": 35.0, "notas": "Bernabéu tour 35€. Metropolitano tour 22€. Pretemporada 15 ago = posible partido. Verifica.", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "15-Ago", "dia": "Sábado", "ciudad": "Madrid", "horario": "14:00-15:30", "actividad": "Almuerzo Sol/Gran Vía", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 14.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "15-Ago", "dia": "Sábado", "ciudad": "Madrid", "horario": "15:30-16:30", "actividad": "Empacar + ir Atocha", "categoria": "TRANSPORTE", "transporte": "Metro", "tiempo": "1h", "presupuesto": 2.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "15-Ago", "dia": "Sábado", "ciudad": "Madrid", "horario": "17:00-19:30", "actividad": "Tren Madrid → Alicante", "categoria": "TRANSPORTE", "transporte": "Tren AVE", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "15-Ago", "dia": "Sábado", "ciudad": "Alicante", "horario": "19:30-21:00", "actividad": "Check-in + cena ligera", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "15-Ago", "dia": "Sábado", "ciudad": "Alicante", "horario": "21:00-00:00", "actividad": "Hogueras energía + paseo (sábado COL no trabajas)", "categoria": "NIGHTLIFE", "transporte": "A pie", "tiempo": "3h", "presupuesto": 0.0, "notas": "Si hay festival/Hogueras zona, aprovecha. Si no, cervezas Casco Antiguo.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "15-Ago", "dia": "Sábado", "ciudad": "Alicante", "horario": "00:00-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "9h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "16-Ago", "dia": "Domingo", "ciudad": "Alicante", "horario": "09:00-11:00", "actividad": "Desayuno + Playa San Juan", "categoria": "DESCANSO", "transporte": "Tram L1", "tiempo": "2h", "presupuesto": 0.0, "notas": "San Juan = mejor playa, tram 45min. Llega antes 11.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "16-Ago", "dia": "Domingo", "ciudad": "Alicante", "horario": "11:00-15:00", "actividad": "Playa + almuerzo chiringuito", "categoria": "DESCANSO/COMIDA", "transporte": "A pie", "tiempo": "4h", "presupuesto": 0.0, "notas": "Paella playa 12-18€. Lleva agua/protector.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "16-Ago", "dia": "Domingo", "ciudad": "Alicante", "horario": "15:00-18:00", "actividad": "Regresar centro + siesta", "categoria": "DESCANSO", "transporte": "Tram", "tiempo": "3h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "16-Ago", "dia": "Domingo", "ciudad": "Alicante", "horario": "18:00-21:00", "actividad": "Vintage Calle Castaños + paseo", "categoria": "VINTAGE/SHOPPING", "transporte": "A pie", "tiempo": "3h", "presupuesto": 0.0, "notas": "Humana, Mr. Mustache vintage, mercadillos esporádicos.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "16-Ago", "dia": "Domingo", "ciudad": "Alicante", "horario": "21:00-22:00", "actividad": "Cena", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "16-Ago", "dia": "Domingo", "ciudad": "Alicante", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "16-Ago", "dia": "Domingo", "ciudad": "Alicante", "horario": "02:00-10:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "8h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "17-Ago", "dia": "Lunes", "ciudad": "Alicante", "horario": "10:00-13:00", "actividad": "Día relax: lavandería + cafés", "categoria": "DESCANSO/TRABAJO PERSONAL", "transporte": "A pie", "tiempo": "3h", "presupuesto": 0.0, "notas": "Lavandería autoservicio 6-10€ lavado+secado. Wash & Co, Lava Express.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "17-Ago", "dia": "Lunes", "ciudad": "Alicante", "horario": "13:00-14:30", "actividad": "Almuerzo menú", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "17-Ago", "dia": "Lunes", "ciudad": "Alicante", "horario": "14:30-17:00", "actividad": "Siesta + descanso", "categoria": "DESCANSO", "transporte": "-", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "17-Ago", "dia": "Lunes", "ciudad": "Alicante", "horario": "17:00-20:00", "actividad": "Subir Castillo San Fernando (gratis) o repetir Santa Bárbara atardecer", "categoria": "TURISMO/HISTÓRICO", "transporte": "A pie", "tiempo": "3h", "presupuesto": 0.0, "notas": "San Fernando gratis, menos turístico. Santa Bárbara atardecer = espectacular.", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "17-Ago", "dia": "Lunes", "ciudad": "Alicante", "horario": "20:00-22:00", "actividad": "Cena despedida + drinks", "categoria": "COMIDA/NIGHTLIFE", "transporte": "A pie", "tiempo": "2h", "presupuesto": 25.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "17-Ago", "dia": "Lunes", "ciudad": "Alicante", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "17-Ago", "dia": "Lunes", "ciudad": "Alicante", "horario": "02:00-10:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "8h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "18-Ago", "dia": "Martes", "ciudad": "Alicante", "horario": "10:00-13:00", "actividad": "Desayuno + últimas compras mercado", "categoria": "COMIDA/MERCADO", "transporte": "A pie", "tiempo": "3h", "presupuesto": 0.0, "notas": "Mercado Central llévate jamón sellado para Colombia (revisar restricciones aduana).", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "18-Ago", "dia": "Martes", "ciudad": "Alicante", "horario": "13:00-15:00", "actividad": "Almuerzo + último paseo Explanada", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "2h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "18-Ago", "dia": "Martes", "ciudad": "Alicante", "horario": "15:00-16:30", "actividad": "Empacar + ir estación", "categoria": "TRANSPORTE", "transporte": "A pie/Bus", "tiempo": "1:30h", "presupuesto": 2.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "18-Ago", "dia": "Martes", "ciudad": "Alicante", "horario": "17:00-19:30", "actividad": "Tren Alicante → Madrid", "categoria": "TRANSPORTE", "transporte": "Tren AVE", "tiempo": "2:30h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [38.3452, -0.481]}, {"fecha": "18-Ago", "dia": "Martes", "ciudad": "Madrid", "horario": "19:30-21:00", "actividad": "Llegada Madrid + check-in zona Sol/Malasaña", "categoria": "DESCANSO", "transporte": "Metro", "tiempo": "1:30h", "presupuesto": 5.0, "notas": "Hostel cerca Atocha/Sol para facilitar día 20", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "18-Ago", "dia": "Martes", "ciudad": "Madrid", "horario": "21:00-22:00", "actividad": "Cena ligera tapas", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1h", "presupuesto": 15.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "18-Ago", "dia": "Martes", "ciudad": "Madrid", "horario": "22:00-02:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "18-Ago", "dia": "Martes", "ciudad": "Madrid", "horario": "02:00-09:00", "actividad": "Dormir", "categoria": "DORMIR", "transporte": "-", "tiempo": "7h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "10:00-11:30", "actividad": "Desayuno churros con chocolate", "categoria": "COMIDA", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 6.0, "notas": "San Ginés (clásico, abierto 24h) o Chocolat", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "11:30-14:00", "actividad": "Museo del Prado", "categoria": "ARTE/MUSEO", "transporte": "Metro Banco España", "tiempo": "2:30h", "presupuesto": 15.0, "notas": "Si vas 11:30, paga 15€. Si esperas 18h, gratis pero lleno", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "14:00-15:30", "actividad": "Almuerzo La Latina menú del día", "categoria": "COMIDA", "transporte": "Metro La Latina", "tiempo": "1:30h", "presupuesto": 13.0, "notas": "Cava Baja: Casa Lucio (caro), Txirimiri (asequible)", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "15:30-17:30", "actividad": "Siesta", "categoria": "DESCANSO", "transporte": "-", "tiempo": "2h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "17:30-19:30", "actividad": "Palacio Real + Catedral Almudena", "categoria": "HISTÓRICO/ARQUITECTURA", "transporte": "Metro Ópera", "tiempo": "2h", "presupuesto": 14.0, "notas": "Palacio 14€. Almudena gratis. Cambio de guardia mié 11-14h (perdiste hoy)", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "19:30-21:00", "actividad": "Templo de Debod atardecer", "categoria": "HISTÓRICO/TURISMO", "transporte": "A pie", "tiempo": "1:30h", "presupuesto": 0.0, "notas": "GRATIS. Templo egipcio s.II a.C. regalado por Egipto. Mejor atardecer de Madrid", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "21:00-23:00", "actividad": "Cena + cañas Malasaña", "categoria": "COMIDA/NIGHTLIFE", "transporte": "Metro Tribunal", "tiempo": "2h", "presupuesto": 22.0, "notas": "Última noche, disfruta. Plaza 2 de Mayo", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "23:00-03:00", "actividad": "TRABAJO REMOTO", "categoria": "TRABAJO", "transporte": "-", "tiempo": "4h", "presupuesto": 0.0, "notas": "⚠️ Trabajas hasta 3am y vuelo 12:15pm", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "19-Ago", "dia": "Miércoles", "ciudad": "Madrid", "horario": "03:00-08:00", "actividad": "Dormir corto", "categoria": "DORMIR", "transporte": "-", "tiempo": "5h", "presupuesto": 0.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "20-Ago", "dia": "Jueves", "ciudad": "Madrid", "horario": "08:00-09:00", "actividad": "Empacar + desayuno rápido", "categoria": "LOGÍSTICA", "transporte": "-", "tiempo": "1h", "presupuesto": 5.0, "notas": "", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "20-Ago", "dia": "Jueves", "ciudad": "Madrid", "horario": "09:00-10:30", "actividad": "Metro/Cercanías a Barajas T4/T1", "categoria": "TRANSPORTE", "transporte": "Cercanías C1 o Metro L8", "tiempo": "1:30h", "presupuesto": 5.0, "notas": "Cercanías Atocha→T4 directo 2.60€. Metro L8 Nuevos Ministerios→T4", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "20-Ago", "dia": "Jueves", "ciudad": "Madrid", "horario": "10:30-12:15", "actividad": "Check-in + filtros + abordaje", "categoria": "TRANSPORTE", "transporte": "Aeropuerto", "tiempo": "1:45h", "presupuesto": 0.0, "notas": "Llega 2h antes para vuelos largos. Si T4 satélite, hay tren shuttle 10min", "vacaciones": "No", "coords": [40.4168, -3.7038]}, {"fecha": "20-Ago", "dia": "Jueves", "ciudad": "Madrid", "horario": 0.5104166666666666, "actividad": "✈️ Vuelo de regreso", "categoria": "-", "transporte": "Avión", "tiempo": "-", "presupuesto": 0.0, "notas": "🎉 Fin del viaje", "vacaciones": "Si", "coords": [40.4168, -3.7038]}]};
+
+// State
+let currentView = 'home';
+let currentCity = null;
+let currentFilter = 'all';
+let map = null;
+let cityMarkers = {};
+
+// Category classification
+function classifyCategory(cat) {
+  const c = (cat || '').toUpperCase();
+  if (c.includes('TRABAJO')) return 'work';
+  if (c.includes('COMIDA') || c.includes('MERCADO') || c.includes('NIGHTLIFE')) return 'food';
+  if (c.includes('TURISMO') || c.includes('ARTE') || c.includes('MUSEO') || c.includes('ARQUITECTURA') || c.includes('HISTÓRICO') || c.includes('PARQUE') || c.includes('FÚTBOL') || c.includes('SHOPPING') || c.includes('VINTAGE') || c.includes('NATURA')) return 'tourism';
+  if (c.includes('TRANSPORTE') || c.includes('LOGÍSTICA') || c.includes('LOGISTICA')) return 'transport';
+  if (c.includes('DESCANSO') || c.includes('DORMIR')) return 'rest';
+  return 'rest';
+}
+
+function categoryEmoji(type) {
+  return {work: '💻', food: '🍽️', tourism: '🏛️', transport: '🚆', rest: '😴'}[type] || '📍';
+}
+
+// === HOME VIEW ===
+function renderHome() {
+  renderMap();
+  renderCityGrid();
+}
+
+function renderMap() {
+  if (map) { map.remove(); }
+  map = L.map('map', { scrollWheelZoom: false }).setView([46, 5], 4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    maxZoom: 19
+  }).addTo(map);
+
+  const path = [];
+  DATA.cityOrder.forEach((city, idx) => {
+    const coords = DATA.cityCoords[city];
+    if (!coords) return;
+    path.push(coords);
+    const marker = L.marker(coords, {
+      icon: L.divIcon({
+        className: 'city-marker',
+        html: `<div style="background:#ff7849;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;border:2px solid #0f1419;box-shadow:0 2px 8px rgba(0,0,0,0.5);">${idx+1}</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      })
+    }).addTo(map);
+    marker.bindPopup(`<b>${city}</b><br>Parada ${idx+1}`);
+    marker.on('click', () => openCity(city));
+    cityMarkers[city] = marker;
+  });
+
+  // Draw route line
+  L.polyline(path, { color: '#ff7849', weight: 2, opacity: 0.6, dashArray: '6,8' }).addTo(map);
+  map.fitBounds(path, { padding: [30, 30] });
+}
+
+function renderCityGrid() {
+  const grid = document.getElementById('cityGrid');
+  grid.innerHTML = '';
+  DATA.cityOrder.forEach((city, idx) => {
+    const items = DATA.records.filter(r => r.ciudad === city);
+    const dates = [...new Set(items.map(r => r.fecha))];
+    const budget = items.reduce((s, r) => s + (r.presupuesto || 0), 0);
+    const workCount = items.filter(r => classifyCategory(r.categoria) === 'work').length;
+    const vacationCount = new Set(items.filter(r => r.vacaciones === 'Si').map(r => r.fecha)).size;
+
+    const card = document.createElement('div');
+    card.className = 'city-card';
+    card.innerHTML = `
+      <div class="num">#${idx+1}</div>
+      <h3>${city}</h3>
+      <div class="dates">${dates.length} día${dates.length>1?'s':''} · ${dates[0]} → ${dates[dates.length-1]}</div>
+      <div class="stats">
+        <span class="stat-pill budget">€${budget.toFixed(0)}</span>
+        ${workCount ? `<span class="stat-pill work">${workCount} trabajo</span>` : ''}
+        ${vacationCount ? `<span class="stat-pill vacation">${vacationCount} vacaciones</span>` : ''}
+      </div>
+    `;
+    card.onclick = () => openCity(city);
+    grid.appendChild(card);
+  });
+}
+
+function openCity(city) {
+  currentCity = city;
+  switchView('timeline');
+  document.getElementById('backBtn').classList.remove('hidden');
+  renderTimeline();
+}
+
+// === TIMELINE VIEW ===
+function renderTimeline() {
+  const container = document.getElementById('timeline');
+  let records = currentCity
+    ? DATA.records.filter(r => r.ciudad === currentCity)
+    : DATA.records;
+
+  if (currentFilter !== 'all') {
+    records = records.filter(r => classifyCategory(r.categoria) === currentFilter);
+  }
+
+  // Group by date preserving order
+  const groups = [];
+  const groupMap = {};
+  records.forEach(r => {
+    if (!groupMap[r.fecha]) {
+      groupMap[r.fecha] = { fecha: r.fecha, dia: r.dia, items: [], isVacation: false };
+      groups.push(groupMap[r.fecha]);
+    }
+    groupMap[r.fecha].items.push(r);
+    if (r.vacaciones === 'Si') groupMap[r.fecha].isVacation = true;
+  });
+
+  container.innerHTML = '';
+
+  if (currentCity) {
+    const heading = document.createElement('h2');
+    heading.style.cssText = 'font-size:1.4rem;margin-bottom:16px;';
+    heading.textContent = `${currentCity}`;
+    container.appendChild(heading);
+  }
+
+  if (groups.length === 0) {
+    container.innerHTML += '<p style="color:var(--text-dim);padding:20px;text-align:center;">No hay actividades con este filtro.</p>';
+    return;
+  }
+
+  groups.forEach(g => {
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'day-group';
+    dayDiv.innerHTML = `
+      <div class="day-header">
+        <span class="date">${g.fecha}</span>
+        <span class="dayname">${g.dia || ''}</span>
+        ${g.isVacation ? '<span class="vac-badge">VACACIONES</span>' : ''}
+      </div>
+    `;
+    g.items.forEach(it => {
+      const type = classifyCategory(it.categoria);
+      const div = document.createElement('div');
+      div.className = `activity ${type}`;
+      div.innerHTML = `
+        <div class="activity-head">
+          <div class="time">${it.horario || ''}</div>
+          <div class="title">
+            ${categoryEmoji(type)} ${it.actividad}
+            ${!currentCity ? `<div style="font-size:0.75rem;color:var(--text-dim);margin-top:2px;">${it.ciudad}</div>` : ''}
+          </div>
+          <span class="cat-pill">${it.categoria}</span>
+        </div>
+        <div class="activity-meta">
+          ${it.transporte && it.transporte !== '-' ? `<span class="meta-item">🚶 ${it.transporte}</span>` : ''}
+          ${it.tiempo && it.tiempo !== '-' ? `<span class="meta-item">⏱️ ${it.tiempo}</span>` : ''}
+          ${it.presupuesto > 0 ? `<span class="meta-item" style="color:var(--accent);font-weight:600;">€${it.presupuesto.toFixed(0)}</span>` : ''}
+        </div>
+        ${it.notas ? `<div class="notes">💡 ${it.notas}</div>` : ''}
+      `;
+      dayDiv.appendChild(div);
+    });
+    container.appendChild(dayDiv);
+  });
+}
+
+// === SUMMARY VIEW ===
+function renderSummary() {
+  // Budget by city
+  const budgetList = document.getElementById('budgetList');
+  budgetList.innerHTML = '';
+  let total = 0;
+  DATA.cityOrder.forEach(city => {
+    const sum = DATA.records.filter(r => r.ciudad === city).reduce((s, r) => s + r.presupuesto, 0);
+    total += sum;
+    budgetList.innerHTML += `<div class="summary-row"><span class="label">${city}</span><span class="value">€${sum.toFixed(0)}</span></div>`;
+  });
+  // Add transit costs from Vuelo + Bus
+  const transitSum = DATA.records.filter(r => r.ciudad === 'Vuelo' || r.ciudad === 'Bus').reduce((s, r) => s + r.presupuesto, 0);
+  total += transitSum;
+  if (transitSum > 0) {
+    budgetList.innerHTML += `<div class="summary-row"><span class="label">Tránsito (vuelos/bus)</span><span class="value">€${transitSum.toFixed(0)}</span></div>`;
+  }
+  budgetList.innerHTML += `<div class="summary-row" style="margin-top:8px;padding-top:12px;border-top:2px solid var(--accent);"><span class="label" style="color:var(--accent);font-weight:700;">TOTAL ESTIMADO</span><span class="value" style="color:var(--accent);font-size:1.1rem;">€${total.toFixed(0)}</span></div>`;
+  budgetList.innerHTML += `<p style="margin-top:10px;font-size:0.75rem;color:var(--text-dim);">Solo incluye costos detallados en notas. No incluye alojamiento, vuelos internacionales no detallados, ni gastos imprevistos.</p>`;
+
+  // Vacation days
+  const vacList = document.getElementById('vacationList');
+  vacList.innerHTML = '';
+  const vacDays = {};
+  DATA.records.forEach(r => {
+    if (r.vacaciones === 'Si') {
+      if (!vacDays[r.fecha]) vacDays[r.fecha] = { dia: r.dia, ciudades: new Set() };
+      vacDays[r.fecha].ciudades.add(r.ciudad);
+    }
+  });
+  const vacEntries = Object.entries(vacDays);
+  vacEntries.forEach(([fecha, info]) => {
+    vacList.innerHTML += `
+      <div class="vacation-day">
+        <span class="date">${fecha}</span>
+        <span class="dayname" style="color:var(--text-dim);font-size:0.85rem;min-width:80px;">${info.dia}</span>
+        <span class="city">${[...info.ciudades].join(' · ')}</span>
+      </div>
+    `;
+  });
+  vacList.innerHTML += `<p style="margin-top:10px;font-size:0.85rem;color:var(--vacation);font-weight:600;">Total: ${vacEntries.length} días de vacaciones</p>`;
+
+  // Work blocks
+  const workList = document.getElementById('workList');
+  workList.innerHTML = '';
+  const workBlocks = DATA.records.filter(r => classifyCategory(r.categoria) === 'work');
+  const workByCity = {};
+  workBlocks.forEach(r => {
+    if (!workByCity[r.ciudad]) workByCity[r.ciudad] = [];
+    workByCity[r.ciudad].push(r);
+  });
+  Object.entries(workByCity).forEach(([city, blocks]) => {
+    workList.innerHTML += `<div class="summary-row"><span class="label">${city}</span><span class="value">${blocks.length} bloque${blocks.length>1?'s':''}</span></div>`;
+  });
+  workList.innerHTML += `<p style="margin-top:10px;font-size:0.85rem;color:var(--work);font-weight:600;">Total: ${workBlocks.length} bloques de trabajo remoto</p>`;
+}
+
+// === NAVIGATION ===
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.view === view);
+  });
+  document.getElementById('view-home').classList.toggle('hidden', view !== 'home');
+  document.getElementById('view-timeline').classList.toggle('hidden', view !== 'timeline');
+  document.getElementById('view-summary').classList.toggle('hidden', view !== 'summary');
+
+  if (view === 'home') {
+    currentCity = null;
+    document.getElementById('backBtn').classList.add('hidden');
+    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+  } else if (view === 'timeline') {
+    if (!currentCity) document.getElementById('backBtn').classList.add('hidden');
+    renderTimeline();
+  } else if (view === 'summary') {
+    renderSummary();
+  }
+}
+
+// === EVENT LISTENERS ===
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    if (t.dataset.view === 'timeline') currentCity = null;
+    switchView(t.dataset.view);
+  };
+});
+
+document.getElementById('backBtn').onclick = () => {
+  currentCity = null;
+  switchView('home');
+};
+
+document.querySelectorAll('.filter-btn').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentFilter = b.dataset.filter;
+    renderTimeline();
+  };
+});
+
+// Init
+renderHome();
+</script>
+</body>
+</html>
