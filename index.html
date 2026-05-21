@@ -1177,6 +1177,11 @@
         <div id="fCiudadHint" style="font-size:0.72rem;margin-top:3px;min-height:1em;color:var(--text-dim);"></div>
       </div>
       <div class="form-group full">
+        <label>Ubicación específica <span style="color:var(--text-dim);font-weight:400;">(opcional — pin exacto en el mapa de la ciudad)</span></label>
+        <input type="text" id="fUbicacion" placeholder="Sagrada Familia, Coliseo, Louvre, Trevi..." autocomplete="off">
+        <div id="fUbicacionHint" style="font-size:0.72rem;margin-top:3px;min-height:1em;color:var(--text-dim);"></div>
+      </div>
+      <div class="form-group full">
         <label>Notas</label>
         <textarea id="fNotas" placeholder="Consejos, detalles..."></textarea>
       </div>
@@ -1353,7 +1358,9 @@ let resPayFilter   = 'all';
 let map            = null;
 let cityMarkers    = {};
 let cityDetailMap  = null;
-let geocodeTimer   = null;
+let geocodeTimer      = null;
+let locationTimer     = null;
+let modalLocationCoords = null;
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function showLoading(v) {
@@ -2282,6 +2289,18 @@ function openModal({record, index, fecha, dia, ciudad}) {
   document.getElementById('fNotas').value      = record ? (record.notas||'') : '';
   populateCiudadDatalist();
   document.getElementById('fCiudad').dispatchEvent(new Event('input'));
+  // Reset location field
+  document.getElementById('fUbicacion').value = '';
+  modalLocationCoords = null;
+  const ubHint = document.getElementById('fUbicacionHint');
+  const existingCoords = record ? record.coords : null;
+  if (existingCoords && Array.isArray(existingCoords) && existingCoords.length === 2) {
+    ubHint.textContent = `📍 ${existingCoords[0].toFixed(4)}, ${existingCoords[1].toFixed(4)} — pin existente. Escribe para cambiar.`;
+    ubHint.style.color = 'var(--text-dim)';
+  } else {
+    ubHint.textContent = 'Si no escribes nada, se usan las coordenadas de la ciudad.';
+    ubHint.style.color = 'var(--text-dim)';
+  }
   modalCtx = { id:record?record.id:null, ciudad:record?record.ciudad:ciudad, coords:record?record.coords:null, vacaciones:record?(record.vacaciones||'No'):'No' };
   document.getElementById('modalOverlay').classList.remove('hidden');
   setTimeout(() => document.getElementById('fActividad').focus(), 60);
@@ -2306,7 +2325,7 @@ async function saveModal() {
     notas:       document.getElementById('fNotas').value.trim(),
     vacaciones:  modalCtx.vacaciones,
     ciudad:      document.getElementById('fCiudad').value.trim() || modalCtx.ciudad || '',
-    coords:      DATA.cityCoords[document.getElementById('fCiudad').value.trim()] || modalCtx.coords || null
+    coords:      modalLocationCoords ?? modalCtx.coords ?? DATA.cityCoords[document.getElementById('fCiudad').value.trim()] ?? null
   };
   try {
     if (modalEditIndex !== null) {
@@ -2390,6 +2409,59 @@ document.getElementById('fCiudad').addEventListener('input', e => {
   hint.textContent = '🔍 Buscando coordenadas...';
   hint.style.color = 'var(--text-dim)';
   geocodeTimer = setTimeout(() => geocodeCity(city), 700);
+});
+
+async function geocodeLocation(locationName, cityName) {
+  const hint  = document.getElementById('fUbicacionHint');
+  const input = document.getElementById('fUbicacion');
+  if (input.value.trim() !== locationName) return;
+  try {
+    const query = cityName ? `${locationName}, ${cityName}` : locationName;
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=0&accept-language=es`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (input.value.trim() !== locationName) return;
+    if (data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
+      modalLocationCoords = [lat, lon];
+      const shortName = data[0].display_name.split(',')[0];
+      hint.textContent = `📍 ${lat.toFixed(4)}, ${lon.toFixed(4)} — "${shortName}" ✓`;
+      hint.style.color = 'var(--vacation)';
+    } else {
+      modalLocationCoords = null;
+      hint.textContent = '❌ No encontrado. Se mantendrán las coords de la ciudad.';
+      hint.style.color = '#ef4444';
+    }
+  } catch(err) {
+    if (document.getElementById('fUbicacion').value.trim() !== locationName) return;
+    modalLocationCoords = null;
+    hint.textContent = '⚠️ Error al buscar. Se mantendrán las coords actuales.';
+    hint.style.color = 'var(--work)';
+  }
+}
+
+document.getElementById('fUbicacion').addEventListener('input', e => {
+  const loc  = e.target.value.trim();
+  const hint = document.getElementById('fUbicacionHint');
+  clearTimeout(locationTimer);
+  modalLocationCoords = null;
+  if (!loc) {
+    const existing = modalCtx.coords;
+    if (existing && Array.isArray(existing)) {
+      hint.textContent = `📍 ${existing[0].toFixed(4)}, ${existing[1].toFixed(4)} — pin existente conservado.`;
+      hint.style.color = 'var(--text-dim)';
+    } else {
+      hint.textContent = 'Se usarán las coordenadas de la ciudad.';
+      hint.style.color = 'var(--text-dim)';
+    }
+    return;
+  }
+  hint.textContent = '🔍 Buscando ubicación...';
+  hint.style.color = 'var(--text-dim)';
+  const city = document.getElementById('fCiudad').value.trim();
+  locationTimer = setTimeout(() => geocodeLocation(loc, city), 700);
 });
 function populateCiudadDatalist() {
   const dl = document.getElementById('ciudadesList');
