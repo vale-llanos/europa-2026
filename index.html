@@ -564,6 +564,7 @@
   .cal-day.cal-vac:hover   { filter: brightness(1.2); }
   .cal-day.cal-normal      { background: var(--surface-2); border-color: var(--border); cursor: pointer; }
   .cal-day.cal-normal:hover { filter: brightness(1.25); }
+  .cal-day.cal-filtered    { opacity: 0.1; cursor: default !important; pointer-events: none; }
   .cal-day.cal-vac .cal-day-num { color: var(--vacation); font-weight: 800; }
   .cal-transport-dot { font-size: 0.5rem; line-height: 1; margin-top: 1px; }
   .cal-day-num { font-weight: 700; font-size: 0.78rem; line-height: 1.5; }
@@ -842,6 +843,7 @@
           <option value="No">💼 No</option>
         </select>
       </div>
+      <button class="filter-btn" id="clearFilters" title="Limpiar todos los filtros" style="margin-left:auto;">✕ Limpiar</button>
     </div>
     <div id="calendar" class="hidden"></div>
     <div id="timeline"></div>
@@ -1096,11 +1098,32 @@ async function dbDeleteReservation(id) {
 // ── Data init ─────────────────────────────────────────────────────────────────
 DATA.reservations = [];
 
+async function seedActividades() {
+  const loadMsg = document.querySelector('#loadingOverlay p');
+  if (loadMsg) loadMsg.textContent = 'Primera vez: guardando itinerario en la nube…';
+  // Strip any stale local id field; Supabase auto-generates the real one
+  const rows = DATA.records.map(({ id: _id, ...r }) => r);
+  const BATCH = 50;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const { error } = await sb.from('actividades').insert(rows.slice(i, i + BATCH));
+    if (error) throw error;
+  }
+}
+
 async function loadData() {
   showLoading(true);
+  const loadMsg = document.querySelector('#loadingOverlay p');
   try {
-    const acts = await dbLoadActivities();
+    let acts = await dbLoadActivities();
+
+    if (acts.length === 0 && DATA.records.length > 0) {
+      // Auto-seed the hardcoded itinerary on first run
+      await seedActividades();
+      acts = await dbLoadActivities(); // reload to get Supabase-generated IDs
+    }
+
     if (acts.length > 0) { DATA.records = acts; sortRecords(); }
+
     DATA.reservations = await dbLoadReservations();
   } catch (err) {
     console.warn('Supabase unavailable, using local fallback:', err.message);
@@ -1111,6 +1134,7 @@ async function loadData() {
       if (r) DATA.reservations = JSON.parse(r);
     } catch(e) {}
   }
+  if (loadMsg) loadMsg.textContent = 'Cargando datos…';
   showLoading(false);
 }
 
@@ -1314,16 +1338,21 @@ function renderTimeline() {
 function renderCalendar() {
   const container = document.getElementById('calendar');
   container.innerHTML = '';
-  // Build date maps
-  const dateIsVac = {}, dateHasTransport = {}, dateInTrip = {};
+
+  // Build per-date maps (all unique cities per date, vacation, transport)
+  const dateCitiesList = {}, dateIsVac = {}, dateHasTransport = {}, dateInTrip = {};
   DATA.records.forEach(r => {
     dateInTrip[r.fecha] = true;
+    if (!dateCitiesList[r.fecha]) dateCitiesList[r.fecha] = [];
+    if (!dateCitiesList[r.fecha].includes(r.ciudad)) dateCitiesList[r.fecha].push(r.ciudad);
     if (r.vacaciones === 'Si') dateIsVac[r.fecha] = true;
     if (classifyCategory(r.categoria) === 'transport') dateHasTransport[r.fecha] = true;
   });
+
   const DOW = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const wrap = document.createElement('div');
   wrap.className = 'cal-container';
+
   [{year:2026,month:6},{year:2026,month:7}].forEach(({year,month}) => {
     const monthDiv = document.createElement('div');
     monthDiv.className = 'cal-month';
@@ -1335,17 +1364,36 @@ function renderCalendar() {
     const firstDow = new Date(year,month,1).getDay();
     const days = new Date(year,month+1,0).getDate();
     for (let i = 0; i < firstDow; i++) grid.innerHTML += '<div class="cal-day cal-empty"></div>';
+
     for (let d = 1; d <= days; d++) {
       const key = `${d}-${MONTH_ABR[month]}`;
       const inTrip = !!dateInTrip[key];
       const isVac  = !!dateIsVac[key];
       const hasT   = !!dateHasTransport[key];
-      const cell = document.createElement('div');
-      const cls = !inTrip ? 'cal-empty' : isVac ? 'cal-vac' : 'cal-normal';
-      cell.className = `cal-day ${cls}`;
-      cell.innerHTML = `<span class="cal-day-num">${d}</span>${hasT&&inTrip?'<span class="cal-transport-dot">🚆</span>':''}`;
+      // Primary display city: prefer non-transit cities
+      const cities = dateCitiesList[key] || [];
+      const primaryCity = cities.find(c => c !== 'Vuelo' && c !== 'Bus') || cities[0] || null;
+      const color = primaryCity ? cityColor(primaryCity) : null;
+      const short = primaryCity ? (primaryCity.length > 7 ? primaryCity.slice(0,6)+'…' : primaryCity) : '';
+
+      // Filter logic: dim when city filter or vacation filter doesn't match
+      let isFiltered = false;
       if (inTrip) {
-        cell.title = (isVac ? '🏖️ Vacaciones — ' : '') + key;
+        if (currentCity && !cities.includes(currentCity)) isFiltered = true;
+        if (currentVacFilter === 'Si' && !isVac) isFiltered = true;
+        if (currentVacFilter === 'No' && isVac) isFiltered = true;
+      }
+
+      const cell = document.createElement('div');
+      const cls = !inTrip ? 'cal-empty' : isFiltered ? 'cal-filtered' : isVac ? 'cal-vac' : 'cal-normal';
+      cell.className = `cal-day ${cls}`;
+      cell.innerHTML =
+        `<span class="cal-day-num">${d}</span>` +
+        (primaryCity && inTrip && !isFiltered ? `<span class="cal-city-label" style="color:${color}">${short}</span>` : '') +
+        (hasT && inTrip && !isFiltered ? '<span class="cal-transport-dot">🚆</span>' : '');
+
+      if (inTrip && !isFiltered) {
+        cell.title = (isVac ? '🏖️ ' : '') + key + (primaryCity ? ` — ${primaryCity}` : '');
         cell.onclick = () => {
           calendarMode = false;
           document.getElementById('calToggle').classList.remove('active');
@@ -1365,7 +1413,7 @@ function renderCalendar() {
     wrap.appendChild(monthDiv);
   });
   container.appendChild(wrap);
-  // Legend
+
   const legend = document.createElement('div');
   legend.className = 'cal-legend';
   legend.innerHTML = `
@@ -1545,6 +1593,11 @@ function switchView(view) {
 }
 
 // ── Filter init ───────────────────────────────────────────────────────────────
+function rerender() {
+  if (currentView !== 'timeline') return;
+  calendarMode ? renderCalendar() : renderTimeline();
+}
+
 function initFilters() {
   const citySelect = document.getElementById('filterCity');
   DATA.cityOrder.forEach(city => {
@@ -1554,16 +1607,26 @@ function initFilters() {
   });
   document.getElementById('filterType').onchange = e => {
     currentFilter = e.target.value;
-    if (currentView === 'timeline' && !calendarMode) renderTimeline();
+    rerender();
   };
   document.getElementById('filterCity').onchange = e => {
     currentCity = e.target.value || null;
     document.getElementById('backBtn').classList.toggle('hidden', !currentCity);
-    if (currentView === 'timeline') calendarMode ? renderCalendar() : renderTimeline();
+    rerender();
   };
   document.getElementById('filterVacation').onchange = e => {
     currentVacFilter = e.target.value || 'all';
-    if (currentView === 'timeline' && !calendarMode) renderTimeline();
+    rerender();
+  };
+  document.getElementById('clearFilters').onclick = () => {
+    currentFilter    = 'all';
+    currentCity      = null;
+    currentVacFilter = 'all';
+    document.getElementById('filterType').value     = 'all';
+    document.getElementById('filterCity').value     = '';
+    document.getElementById('filterVacation').value = 'all';
+    document.getElementById('backBtn').classList.add('hidden');
+    rerender();
   };
 }
 
