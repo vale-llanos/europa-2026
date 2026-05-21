@@ -1588,13 +1588,14 @@ function renderReservations() {
     addBtn.onclick = e => { e.stopPropagation(); openResModal({reservation:null, ciudad:city}); };
     header.appendChild(addBtn);
     header.onclick = () => {
-      const nowHidden = cards.classList.toggle('hidden');
-      header.querySelector('.res-chevron').style.transform = nowHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+      const nowHidden = cards.style.display === 'none';
+      cards.style.display = nowHidden ? '' : 'none';
+      header.querySelector('.res-chevron').style.transform = nowHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
     };
     section.appendChild(header);
     const cards = document.createElement('div');
     cards.className = 'res-cards';
-    if (isCollapsed) cards.classList.add('hidden');
+    if (isCollapsed) cards.style.display = 'none';
     if (!allCityRecs.length) {
       cards.innerHTML = '<p class="res-empty">Sin reservas aún. Agrega hoteles, restaurantes, atracciones...</p>';
     } else {
