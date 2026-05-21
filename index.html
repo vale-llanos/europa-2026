@@ -784,6 +784,114 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-overlay p { color: var(--text-dim); font-size: 0.9rem; }
+
+  /* === CITY DETAIL VIEW === */
+  #city-detail-map {
+    height: 300px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+    background: var(--surface);
+  }
+  .city-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .city-detail-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+  .city-detail-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .city-detail-section h3 {
+    font-size: 1.0rem;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .city-day-accordion {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .city-day-accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .city-day-accordion-header:hover { background: var(--border); }
+  .city-day-accordion-chevron {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .city-day-accordion-header.open .city-day-accordion-chevron { transform: rotate(180deg); }
+  .city-day-accordion-body { padding: 10px; background: var(--surface); display: none; }
+  .city-day-accordion-body.open { display: block; }
+  .city-res-item {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .city-res-item-info { flex: 1; min-width: 0; }
+  .city-res-item-name { font-weight: 700; margin-bottom: 4px; }
+  .city-res-item-meta { font-size: 0.82rem; color: var(--text-dim); margin-top: 3px; }
+  .city-res-item-price { text-align: right; font-weight: 700; color: var(--accent); flex-shrink: 0; min-width: 60px; }
+  .city-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .city-cal-day {
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 2px;
+    min-height: 40px;
+    border: 1px solid transparent;
+  }
+  .city-cal-day.city-cal-empty { background: transparent; }
+  .city-cal-day.city-cal-out { background: var(--bg); opacity: 0.22; }
+  .city-cal-day.city-cal-work { background: rgba(247,201,72,0.18); border-color: rgba(247,201,72,0.45); }
+  .city-cal-day.city-cal-vac { background: rgba(70,196,124,0.18); border-color: rgba(70,196,124,0.45); }
+  .city-cal-day.city-cal-normal { background: var(--surface-2); border-color: var(--border); }
+  .city-cal-day-num { font-weight: 700; font-size: 0.78rem; line-height: 1.5; }
+  .city-cal-day.city-cal-work .city-cal-day-num { color: var(--work); }
+  .city-cal-day.city-cal-vac .city-cal-day-num { color: var(--vacation); }
+  .city-cal-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 12px; }
+  .budget-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 640px) { .budget-two-col { grid-template-columns: 1fr; } }
+  .budget-sub-title {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+  }
 </style>
 </head>
 <body>
@@ -856,6 +964,11 @@
       <div id="budgetList"></div>
     </div>
     <div class="summary-section">
+      <h2>📅 Presupuesto por día</h2>
+      <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Gasto estimado cronológico a lo largo del viaje:</p>
+      <div id="dailyBudgetList"></div>
+    </div>
+    <div class="summary-section">
       <h2>🏖️ Días de vacaciones</h2>
       <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Días marcados como vacaciones (sin trabajo remoto):</p>
       <div id="vacationList"></div>
@@ -875,6 +988,36 @@
   <div id="view-reservations" class="hidden">
     <div id="resFilterBar" style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;"></div>
     <div id="reservationsList"></div>
+  </div>
+
+  <!-- CITY DETAIL VIEW -->
+  <div id="view-city-detail" class="hidden">
+    <button class="back-btn" id="cityDetailBackBtn">← Ciudades</button>
+    <div class="city-detail-header">
+      <div id="cityDetailDot" style="width:14px;height:14px;border-radius:50%;flex-shrink:0;"></div>
+      <span class="city-detail-title" id="cityDetailTitle"></span>
+    </div>
+    <div id="city-detail-map"></div>
+    <div class="city-detail-section">
+      <h3>📅 Itinerario día a día</h3>
+      <div id="cityDetailTimeline"></div>
+    </div>
+    <div class="city-detail-section">
+      <h3>🗓️ Calendario de la ciudad</h3>
+      <div class="city-cal-months" id="cityDetailCalendar"></div>
+      <div id="cityDetailCalLegend"></div>
+    </div>
+    <div class="city-detail-section">
+      <h3>💰 Presupuesto</h3>
+      <div class="budget-two-col">
+        <div id="cityDetailBudgetCat"></div>
+        <div id="cityDetailBudgetDay"></div>
+      </div>
+    </div>
+    <div class="city-detail-section">
+      <h3>🎫 Reservas</h3>
+      <div id="cityDetailReservations"></div>
+    </div>
   </div>
 </div>
 
@@ -1178,6 +1321,7 @@ let calendarMode   = false;
 let resPayFilter   = 'all';
 let map            = null;
 let cityMarkers    = {};
+let cityDetailMap  = null;
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function showLoading(v) {
@@ -1264,9 +1408,243 @@ function renderCityGrid() {
 
 function openCity(city) {
   currentCity = city;
-  document.getElementById('filterCity').value = city;
-  switchView('timeline');
-  document.getElementById('backBtn').classList.remove('hidden');
+  switchView('city-detail');
+  renderCityDetail(city);
+}
+
+// ── City Detail View ──────────────────────────────────────────────────────────
+function renderCityDetail(city) {
+  const color = cityColor(city);
+  document.getElementById('cityDetailTitle').textContent = city;
+  document.getElementById('cityDetailDot').style.background = color;
+  const cityRecords      = DATA.records.filter(r => r.ciudad === city);
+  const cityReservations = DATA.reservations.filter(r => r.ciudad === city);
+  renderCityAccordion(city, cityRecords);
+  renderCityMiniCalendar(city, cityRecords);
+  renderCityBudget(city, cityRecords);
+  renderCityReservationsList(city, cityReservations);
+  setTimeout(() => initCityDetailMap(city, cityRecords), 80);
+}
+
+function initCityDetailMap(city, cityRecords) {
+  if (cityDetailMap) { cityDetailMap.remove(); cityDetailMap = null; }
+  const center = DATA.cityCoords[city];
+  if (!center) return;
+  cityDetailMap = L.map('city-detail-map', { scrollWheelZoom: false }).setView(center, 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+  }).addTo(cityDetailMap);
+  const withCoords = cityRecords.filter(r => r.coords && Array.isArray(r.coords) && r.coords.length === 2);
+  const catColor = { work:'#f7c948', food:'#ec407a', tourism:'#5db8ff', transport:'#b388ff', rest:'#94a3b8' };
+  withCoords.forEach(r => {
+    const type = classifyCategory(r.categoria);
+    const c = catColor[type] || '#ff7849';
+    L.marker(r.coords, {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="background:${c};color:#0f1419;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;border:2px solid #0f1419;box-shadow:0 2px 6px rgba(0,0,0,0.5);">${categoryEmoji(type)}</div>`,
+        iconSize: [26,26], iconAnchor: [13,13]
+      })
+    }).bindPopup(`<b>${r.actividad}</b>${r.horario?`<br>${r.horario}`:''}${r.presupuesto>0?`<br>€${r.presupuesto}`:''}`)
+      .addTo(cityDetailMap);
+  });
+  if (withCoords.length > 1) {
+    cityDetailMap.fitBounds(withCoords.map(r => r.coords), { padding: [30,30] });
+  }
+}
+
+function renderCityAccordion(city, cityRecords) {
+  const container = document.getElementById('cityDetailTimeline');
+  container.innerHTML = '';
+  const groups = {}, order = [];
+  cityRecords.forEach(r => {
+    if (!groups[r.fecha]) { groups[r.fecha] = { fecha:r.fecha, dia:r.dia, items:[], isVac:false }; order.push(r.fecha); }
+    groups[r.fecha].items.push(r);
+    if (r.vacaciones === 'Si') groups[r.fecha].isVac = true;
+  });
+  if (!order.length) {
+    container.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;">Sin actividades registradas.</p>';
+    return;
+  }
+  order.forEach((fecha, i) => {
+    const g = groups[fecha];
+    const dayBudget = g.items.reduce((s,r) => s+(parseFloat(r.presupuesto)||0), 0);
+    const item = document.createElement('div');
+    item.className = 'city-day-accordion';
+    const header = document.createElement('div');
+    header.className = 'city-day-accordion-header' + (i === 0 ? ' open' : '');
+    header.innerHTML = `
+      <span style="font-weight:700;min-width:70px;">${g.fecha}</span>
+      <span style="color:var(--text-dim);font-size:0.85rem;">${g.dia||''}</span>
+      ${g.isVac ? '<span class="vac-badge">🏖️ VAC</span>' : ''}
+      ${dayBudget>0 ? `<span style="font-size:0.78rem;color:var(--accent);font-weight:600;">€${dayBudget.toFixed(0)}</span>` : ''}
+      <span class="city-day-accordion-chevron">▾</span>`;
+    const body = document.createElement('div');
+    body.className = 'city-day-accordion-body' + (i === 0 ? ' open' : '');
+    g.items.forEach(it => {
+      const type = classifyCategory(it.categoria);
+      const div = document.createElement('div');
+      div.className = `activity ${type}`;
+      div.style.marginBottom = '6px';
+      div.innerHTML = `
+        <div class="activity-head">
+          <div class="time">${it.horario||''}</div>
+          <div class="title">${categoryEmoji(type)} ${it.actividad}</div>
+          <span class="cat-pill">${it.categoria}</span>
+        </div>
+        ${(it.presupuesto>0||it.transporte&&it.transporte!=='-'||it.tiempo&&it.tiempo!=='-') ? `<div class="activity-meta">
+          ${it.transporte&&it.transporte!=='-' ? `<span class="meta-item">🚶 ${it.transporte}</span>` : ''}
+          ${it.tiempo&&it.tiempo!=='-'          ? `<span class="meta-item">⏱️ ${it.tiempo}</span>` : ''}
+          ${it.presupuesto>0                    ? `<span class="meta-item" style="color:var(--accent);font-weight:600;">€${it.presupuesto.toFixed(0)}</span>` : ''}
+        </div>` : ''}
+        ${it.notas ? `<div class="notes">💡 ${it.notas}</div>` : ''}`;
+      body.appendChild(div);
+    });
+    header.onclick = () => {
+      const isOpen = header.classList.contains('open');
+      header.classList.toggle('open', !isOpen);
+      body.classList.toggle('open', !isOpen);
+    };
+    item.appendChild(header);
+    item.appendChild(body);
+    container.appendChild(item);
+  });
+}
+
+function renderCityMiniCalendar(city, cityRecords) {
+  const calContainer = document.getElementById('cityDetailCalendar');
+  const legContainer = document.getElementById('cityDetailCalLegend');
+  calContainer.innerHTML = '';
+  legContainer.innerHTML = '';
+  const cityDates = new Set(), dateIsVac = {}, dateHasWork = {};
+  cityRecords.forEach(r => {
+    cityDates.add(r.fecha);
+    if (r.vacaciones === 'Si') dateIsVac[r.fecha] = true;
+    if (classifyCategory(r.categoria) === 'work') dateHasWork[r.fecha] = true;
+  });
+  if (!cityDates.size) return;
+  const monthsSet = new Set();
+  [...cityDates].forEach(f => {
+    const iso = fechaToISO(f);
+    if (iso) monthsSet.add(parseInt(iso.split('-')[1]) - 1);
+  });
+  const DOW = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  [...monthsSet].sort((a,b)=>a-b).forEach(month => {
+    const year = 2026;
+    const monthDiv = document.createElement('div');
+    monthDiv.className = 'cal-month';
+    const label = new Date(year,month,1).toLocaleDateString('es',{month:'long',year:'numeric'});
+    monthDiv.innerHTML = `<div class="cal-month-name">${label[0].toUpperCase()+label.slice(1)}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'city-cal-grid';
+    DOW.forEach(d => { grid.innerHTML += `<div class="cal-dow">${d}</div>`; });
+    const firstDow = new Date(year,month,1).getDay();
+    const days     = new Date(year,month+1,0).getDate();
+    for (let i = 0; i < firstDow; i++) grid.innerHTML += '<div class="city-cal-day city-cal-empty"></div>';
+    for (let d = 1; d <= days; d++) {
+      const key    = `${String(d).padStart(2,'0')}-${MONTH_ABR[month]}`;
+      const inCity = cityDates.has(key);
+      const isVac  = !!dateIsVac[key];
+      const hasWork= !!dateHasWork[key];
+      const cell   = document.createElement('div');
+      let cls = 'city-cal-day ';
+      if (!inCity)     cls += 'city-cal-out';
+      else if (isVac)  cls += 'city-cal-vac';
+      else if (hasWork)cls += 'city-cal-work';
+      else             cls += 'city-cal-normal';
+      cell.className = cls;
+      const icon = !inCity ? '' : isVac ? '🏖️' : hasWork ? '💻' : '';
+      cell.innerHTML = `<span class="city-cal-day-num">${d}</span>${icon ? `<span style="font-size:0.55rem;line-height:1;">${icon}</span>` : ''}`;
+      if (inCity) cell.title = key + (isVac ? ' · Vacaciones' : hasWork ? ' · Trabajo remoto' : '');
+      grid.appendChild(cell);
+    }
+    monthDiv.appendChild(grid);
+    calContainer.appendChild(monthDiv);
+  });
+  legContainer.innerHTML = `<div class="cal-legend" style="margin-top:10px;">
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:rgba(70,196,124,0.5)"></span>Vacaciones 🏖️</span>
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:rgba(247,201,72,0.5)"></span>Trabajo remoto 💻</span>
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--surface-2);border:1px solid var(--border)"></span>Turismo / normal</span>
+    <span class="cal-legend-item" style="opacity:0.5"><span class="cal-legend-dot" style="background:var(--bg)"></span>Fuera de esta ciudad</span>
+  </div>`;
+}
+
+function renderCityBudget(city, cityRecords) {
+  const catContainer = document.getElementById('cityDetailBudgetCat');
+  const dayContainer = document.getElementById('cityDetailBudgetDay');
+  catContainer.innerHTML = '';
+  dayContainer.innerHTML = '';
+  const catLabels = { tourism:'🏛️ Turismo', food:'🍽️ Comida', transport:'🚆 Transporte', work:'💻 Trabajo', rest:'😴 Descanso' };
+  const catColors = { tourism:'var(--tourism)', food:'var(--food)', transport:'var(--transport)', work:'var(--work)', rest:'var(--rest)' };
+  const byCategory = {}, byDay = {};
+  cityRecords.forEach(r => {
+    const amt = parseFloat(r.presupuesto) || 0;
+    if (amt <= 0) return;
+    const type = classifyCategory(r.categoria);
+    byCategory[type] = (byCategory[type] || 0) + amt;
+    if (!byDay[r.fecha]) byDay[r.fecha] = { dia:r.dia, total:0 };
+    byDay[r.fecha].total += amt;
+  });
+  catContainer.innerHTML = '<div class="budget-sub-title">Por categoría</div>';
+  const catEntries = Object.entries(byCategory).sort((a,b) => b[1]-a[1]);
+  if (!catEntries.length) {
+    catContainer.innerHTML += '<p style="color:var(--text-dim);font-size:0.85rem;">Sin gastos registrados.</p>';
+  } else {
+    let totalCat = 0;
+    catEntries.forEach(([type,sum]) => {
+      totalCat += sum;
+      catContainer.innerHTML += `<div class="summary-row"><span class="label" style="color:${catColors[type]||'var(--text)'};">${catLabels[type]||type}</span><span class="value">€${sum.toFixed(0)}</span></div>`;
+    });
+    catContainer.innerHTML += `<div class="summary-row" style="border-top:2px solid var(--accent);margin-top:4px;"><span class="label" style="color:var(--accent);font-weight:700;">Total</span><span class="value" style="color:var(--accent);">€${totalCat.toFixed(0)}</span></div>`;
+  }
+  dayContainer.innerHTML = '<div class="budget-sub-title">Por día</div>';
+  const dayEntries = Object.entries(byDay).sort((a,b) => fechaToISO(a[0]).localeCompare(fechaToISO(b[0])));
+  if (!dayEntries.length) {
+    dayContainer.innerHTML += '<p style="color:var(--text-dim);font-size:0.85rem;">Sin gastos registrados.</p>';
+  } else {
+    dayEntries.forEach(([fecha,info]) => {
+      dayContainer.innerHTML += `<div class="summary-row"><span class="label">${fecha}<span style="color:var(--text-dim);font-size:0.8rem;margin-left:6px;">${info.dia||''}</span></span><span class="value">€${info.total.toFixed(0)}</span></div>`;
+    });
+  }
+}
+
+function renderCityReservationsList(city, cityReservations) {
+  const container = document.getElementById('cityDetailReservations');
+  container.innerHTML = '';
+  if (!cityReservations.length) {
+    container.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;font-style:italic;">Sin reservas registradas para esta ciudad.</p>';
+    return;
+  }
+  cityReservations.forEach(res => {
+    const perPerson = (res.precio > 0 && res.personas > 1) ? `€${(res.precio/res.personas).toFixed(0)}/pers` : '';
+    const ps = res.payStatus || 'unpaid';
+    const payLabel = { paid:'✅ Pagado', topay:'📅 Por pagar', unpaid:'❌ Sin pagar' }[ps] || '— Sin estado';
+    let payDetails = '';
+    if (ps === 'paid') {
+      payDetails = [res.whoPaid ? `Pagó: ${res.whoPaid}` : '', res.installments > 1 ? `${res.installments} cuotas` : ''].filter(Boolean).join(' · ');
+    } else if ((ps === 'topay' || ps === 'unpaid') && res.payDue) {
+      payDetails = `Vence: ${res.payDue}`;
+    }
+    const item = document.createElement('div');
+    item.className = 'city-res-item';
+    item.innerHTML = `
+      <div class="city-res-item-info">
+        <div class="city-res-item-name">${res.nombre}</div>
+        ${res.fecha ? `<div class="city-res-item-meta">📅 ${res.fecha}${res.checkin?` · In ${res.checkin}`:''}${res.checkout?` → Out ${res.checkout}`:''}</div>` : ''}
+        ${res.ubicacion ? `<div class="city-res-item-meta">📍 ${res.ubicacion}</div>` : ''}
+        ${res.confirmacion ? `<div class="city-res-item-meta">🎟 ${res.confirmacion}</div>` : ''}
+        <div class="city-res-item-meta" style="margin-top:6px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+          <span class="pay-badge ${ps}">${payLabel}</span>
+          ${payDetails ? `<span style="font-size:0.78rem;color:var(--text-dim);">${payDetails}</span>` : ''}
+        </div>
+      </div>
+      <div class="city-res-item-price">
+        ${res.precio > 0 ? `<div>€${Number(res.precio).toFixed(0)}</div>` : '<div>—</div>'}
+        ${perPerson ? `<div style="font-size:0.75rem;font-weight:400;color:var(--text-dim);">${perPerson}</div>` : ''}
+        ${res.personas > 1 ? `<div style="font-size:0.72rem;color:var(--text-dim);">👥 ${res.personas}</div>` : ''}
+      </div>`;
+    container.appendChild(item);
+  });
 }
 
 // ── Timeline ──────────────────────────────────────────────────────────────────
@@ -1349,7 +1727,8 @@ function renderTimeline() {
         try {
           if (it.id) await dbDeleteActivity(it.id);
           DATA.records.splice(globalIdx, 1);
-          renderTimeline(); renderCityGrid();
+          rerender(); renderCityGrid();
+          if (currentView === 'summary') renderSummary();
         } catch(err) { alert('Error al eliminar: ' + err.message); }
       };
       dayDiv.appendChild(div);
@@ -1545,6 +1924,41 @@ function renderSummary() {
       <span class="label" style="color:var(--vacation);">Total pagado</span>
       <span class="value" style="color:var(--vacation);">€${totalPaid.toFixed(0)}</span>
     </div>`;
+  // Daily budget
+  const dailyBudgetList = document.getElementById('dailyBudgetList');
+  dailyBudgetList.innerHTML = '';
+  const byDay = {};
+  DATA.records.forEach(r => {
+    if (!r.fecha) return;
+    if (!byDay[r.fecha]) byDay[r.fecha] = { dia:r.dia, cities:new Set(), total:0 };
+    byDay[r.fecha].cities.add(r.ciudad);
+    byDay[r.fecha].total += parseFloat(r.presupuesto) || 0;
+  });
+  const sortedDays = Object.entries(byDay)
+    .filter(([,info]) => info.total > 0)
+    .sort((a,b) => fechaToISO(a[0]).localeCompare(fechaToISO(b[0])));
+  if (!sortedDays.length) {
+    dailyBudgetList.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;font-style:italic;">Sin presupuesto detallado registrado.</p>';
+  } else {
+    let grandTotal = 0;
+    sortedDays.forEach(([fecha,info]) => {
+      grandTotal += info.total;
+      const cities = [...info.cities].join(' · ');
+      dailyBudgetList.innerHTML += `
+        <div class="summary-row">
+          <span class="label">
+            ${fecha}
+            <span style="font-size:0.8rem;color:var(--text-dim);margin-left:6px;">${info.dia||''} · ${cities}</span>
+          </span>
+          <span class="value">€${info.total.toFixed(0)}</span>
+        </div>`;
+    });
+    dailyBudgetList.innerHTML += `
+      <div class="summary-row" style="border-top:2px solid var(--accent);margin-top:8px;padding-top:12px;">
+        <span class="label" style="color:var(--accent);font-weight:700;">TOTAL ESTIMADO</span>
+        <span class="value" style="color:var(--accent);font-size:1.1rem;">€${grandTotal.toFixed(0)}</span>
+      </div>`;
+  }
 }
 
 // ── Reservations view ─────────────────────────────────────────────────────────
@@ -1651,9 +2065,15 @@ function renderReservations() {
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 function switchView(view) {
+  if (currentView === 'city-detail' && view !== 'city-detail') {
+    if (cityDetailMap) { cityDetailMap.remove(); cityDetailMap = null; }
+  }
   currentView = view;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
-  ['home','timeline','summary','reservations'].forEach(v => {
+  const isCityDetail = view === 'city-detail';
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.view === view || (isCityDetail && t.dataset.view === 'home'));
+  });
+  ['home','timeline','summary','reservations','city-detail'].forEach(v => {
     document.getElementById(`view-${v}`).classList.toggle('hidden', v !== view);
   });
   if (view === 'home') {
@@ -1669,12 +2089,16 @@ function switchView(view) {
   } else if (view === 'reservations') {
     renderReservations();
   }
+  // city-detail: content rendered before this call in openCity
 }
 
 // ── Filter init ───────────────────────────────────────────────────────────────
 function rerender() {
-  if (currentView !== 'timeline') return;
-  calendarMode ? renderCalendar() : renderTimeline();
+  if (currentView === 'timeline') {
+    calendarMode ? renderCalendar() : renderTimeline();
+  } else if (currentView === 'city-detail' && currentCity) {
+    renderCityDetail(currentCity);
+  }
 }
 
 function initFilters() {
@@ -1712,11 +2136,12 @@ function initFilters() {
 // ── Event listeners ───────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => {
   t.onclick = () => {
-    if (t.dataset.view === 'timeline') { currentCity = null; }
+    if (t.dataset.view === 'timeline' || t.dataset.view === 'home') { currentCity = null; }
     switchView(t.dataset.view);
   };
 });
 document.getElementById('backBtn').onclick = () => { currentCity = null; switchView('home'); };
+document.getElementById('cityDetailBackBtn').onclick = () => { currentCity = null; switchView('home'); };
 document.getElementById('calToggle').onclick = () => {
   calendarMode = !calendarMode;
   document.getElementById('calToggle').classList.toggle('active', calendarMode);
@@ -1735,7 +2160,8 @@ async function toggleVacationDay(fecha) {
     await Promise.all(day.map(r => r.id ? dbUpdateActivity(r.id, {...r, vacaciones:newVal}) : Promise.resolve()));
   } catch(err) { console.warn('Toggle vacation DB error:', err.message); }
   day.forEach(r => { r.vacaciones = newVal; });
-  renderTimeline(); renderCityGrid();
+  rerender();
+  renderCityGrid();
   if (currentView === 'summary') renderSummary();
 }
 
@@ -1794,7 +2220,7 @@ async function saveModal() {
     }
     sortRecords();
     closeModal();
-    renderTimeline(); renderCityGrid();
+    rerender(); renderCityGrid();
     if (currentView === 'summary') renderSummary();
   } catch(err) { alert('Error al guardar: ' + err.message); }
 }
@@ -1807,7 +2233,10 @@ document.getElementById('btnDelete').onclick   = async () => {
     const ex = DATA.records[modalEditIndex];
     if (ex.id) await dbDeleteActivity(ex.id);
     DATA.records.splice(modalEditIndex, 1);
-    closeModal(); renderTimeline(); renderCityGrid();
+    closeModal();
+    rerender();
+    renderCityGrid();
+    if (currentView === 'summary') renderSummary();
   } catch(err) { alert('Error: ' + err.message); }
 };
 document.getElementById('modalOverlay').onclick = e => {
