@@ -562,10 +562,13 @@
   .cal-day.cal-empty { background: transparent; border-color: transparent; cursor: default; }
   .cal-day.cal-vac   { background: rgba(70,196,124,0.18); border-color: rgba(70,196,124,0.45); cursor: pointer; }
   .cal-day.cal-vac:hover   { filter: brightness(1.2); }
+  .cal-day.cal-work  { background: rgba(247,201,72,0.18); border-color: rgba(247,201,72,0.45); cursor: pointer; }
+  .cal-day.cal-work:hover  { filter: brightness(1.2); }
   .cal-day.cal-normal      { background: var(--surface-2); border-color: var(--border); cursor: pointer; }
   .cal-day.cal-normal:hover { filter: brightness(1.25); }
   .cal-day.cal-filtered    { opacity: 0.1; cursor: default !important; pointer-events: none; }
-  .cal-day.cal-vac .cal-day-num { color: var(--vacation); font-weight: 800; }
+  .cal-day.cal-vac .cal-day-num  { color: var(--vacation); font-weight: 800; }
+  .cal-day.cal-work .cal-day-num { color: var(--work); font-weight: 800; }
   .cal-transport-dot { font-size: 0.5rem; line-height: 1; margin-top: 1px; }
   .cal-day-num { font-weight: 700; font-size: 0.78rem; line-height: 1.5; }
   .cal-city-label {
@@ -883,6 +886,8 @@
   .city-cal-day.city-cal-vac .city-cal-day-num { color: var(--vacation); }
   .city-cal-months { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 12px; }
   .budget-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .side-by-side { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .side-by-side { grid-template-columns: 1fr; } }
   @media (max-width: 640px) { .budget-two-col { grid-template-columns: 1fr; } }
   .budget-sub-title {
     font-size: 0.75rem;
@@ -1003,20 +1008,22 @@
       <div id="cityDetailTimeline"></div>
     </div>
     <div class="city-detail-section">
-      <h3>🗓️ Calendario de la ciudad</h3>
-      <div class="city-cal-months" id="cityDetailCalendar"></div>
-      <div id="cityDetailCalLegend"></div>
-    </div>
-    <div class="city-detail-section">
       <h3>💰 Presupuesto</h3>
       <div class="budget-two-col">
         <div id="cityDetailBudgetCat"></div>
         <div id="cityDetailBudgetDay"></div>
       </div>
     </div>
-    <div class="city-detail-section">
-      <h3>🎫 Reservas</h3>
-      <div id="cityDetailReservations"></div>
+    <div class="side-by-side">
+      <div class="city-detail-section">
+        <h3>🗓️ Calendario</h3>
+        <div class="city-cal-months" id="cityDetailCalendar"></div>
+        <div id="cityDetailCalLegend"></div>
+      </div>
+      <div class="city-detail-section">
+        <h3>🎫 Reservas</h3>
+        <div id="cityDetailReservations"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1750,13 +1757,14 @@ function renderCalendar() {
   const container = document.getElementById('calendar');
   container.innerHTML = '';
 
-  // Build per-date maps (all unique cities per date, vacation, transport)
-  const dateCitiesList = {}, dateIsVac = {}, dateHasTransport = {}, dateInTrip = {};
+  // Build per-date maps (all unique cities per date, vacation, work, transport)
+  const dateCitiesList = {}, dateIsVac = {}, dateHasWork = {}, dateHasTransport = {}, dateInTrip = {};
   DATA.records.forEach(r => {
     dateInTrip[r.fecha] = true;
     if (!dateCitiesList[r.fecha]) dateCitiesList[r.fecha] = [];
     if (!dateCitiesList[r.fecha].includes(r.ciudad)) dateCitiesList[r.fecha].push(r.ciudad);
     if (r.vacaciones === 'Si') dateIsVac[r.fecha] = true;
+    if (classifyCategory(r.categoria) === 'work') dateHasWork[r.fecha] = true;
     if (classifyCategory(r.categoria) === 'transport') dateHasTransport[r.fecha] = true;
   });
 
@@ -1778,9 +1786,10 @@ function renderCalendar() {
 
     for (let d = 1; d <= days; d++) {
       const key = `${String(d).padStart(2,'0')}-${MONTH_ABR[month]}`;
-      const inTrip = !!dateInTrip[key];
-      const isVac  = !!dateIsVac[key];
-      const hasT   = !!dateHasTransport[key];
+      const inTrip  = !!dateInTrip[key];
+      const isVac   = !!dateIsVac[key];
+      const hasWork = !!dateHasWork[key];
+      const hasT    = !!dateHasTransport[key];
       // Primary display city: prefer non-transit cities
       const cities = dateCitiesList[key] || [];
       const primaryCity = cities.find(c => c !== 'Vuelo' && c !== 'Bus') || cities[0] || null;
@@ -1796,7 +1805,7 @@ function renderCalendar() {
       }
 
       const cell = document.createElement('div');
-      const cls = !inTrip ? 'cal-empty' : isFiltered ? 'cal-filtered' : isVac ? 'cal-vac' : 'cal-normal';
+      const cls = !inTrip ? 'cal-empty' : isFiltered ? 'cal-filtered' : isVac ? 'cal-vac' : hasWork ? 'cal-work' : 'cal-normal';
       cell.className = `cal-day ${cls}`;
       cell.innerHTML =
         `<span class="cal-day-num">${d}</span>` +
@@ -1804,7 +1813,7 @@ function renderCalendar() {
         (hasT && inTrip && !isFiltered ? '<span class="cal-transport-dot">🚆</span>' : '');
 
       if (inTrip && !isFiltered) {
-        cell.title = (isVac ? '🏖️ ' : '') + key + (primaryCity ? ` — ${primaryCity}` : '');
+        cell.title = (isVac ? '🏖️ ' : hasWork ? '💻 ' : '') + key + (primaryCity ? ` — ${primaryCity}` : '');
         cell.onclick = () => {
           calendarMode = false;
           document.getElementById('calToggle').classList.remove('active');
@@ -1828,8 +1837,9 @@ function renderCalendar() {
   const legend = document.createElement('div');
   legend.className = 'cal-legend';
   legend.innerHTML = `
-    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:rgba(70,196,124,0.5)"></span>Vacaciones</span>
-    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--surface-2);border:1px solid var(--border)"></span>Trabajo</span>
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:rgba(70,196,124,0.5)"></span>Vacaciones 🏖️</span>
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:rgba(247,201,72,0.5)"></span>Trabajo remoto 💻</span>
+    <span class="cal-legend-item"><span class="cal-legend-dot" style="background:var(--surface-2);border:1px solid var(--border)"></span>Normal</span>
     <span class="cal-legend-item" style="cursor:default;">🚆 = transporte ese día</span>`;
   container.appendChild(legend);
 }
