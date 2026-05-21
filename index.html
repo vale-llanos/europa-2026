@@ -1223,7 +1223,8 @@ async function dbInsertActivity(record) {
   return data;
 }
 async function dbUpdateActivity(id, record) {
-  const { error } = await sb.from('actividades').update(record).eq('id', id);
+  const { id: _id, ...payload } = record;
+  const { error } = await sb.from('actividades').update(payload).eq('id', id);
   if (error) throw error;
 }
 async function dbDeleteActivity(id) {
@@ -2168,8 +2169,11 @@ async function toggleVacationDay(fecha) {
   const newVal = wasVac ? 'No' : 'Si';
   try {
     await Promise.all(day.map(r => r.id ? dbUpdateActivity(r.id, {...r, vacaciones:newVal}) : Promise.resolve()));
-  } catch(err) { console.warn('Toggle vacation DB error:', err.message); }
-  day.forEach(r => { r.vacaciones = newVal; });
+    day.forEach(r => { r.vacaciones = newVal; });
+  } catch(err) {
+    alert('Error guardando vacaciones: ' + err.message);
+    return;
+  }
   rerender();
   renderCityGrid();
   if (currentView === 'summary') renderSummary();
