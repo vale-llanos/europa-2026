@@ -1028,8 +1028,11 @@ const SUPABASE_KEY = 'sb_publishable_V2PXQVCNi8oe09Yl4DiWlw_RaLmasVV';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
-const MONTH_ABR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-const MONTH_NUM = {Ene:'01',Feb:'02',Mar:'03',Abr:'04',May:'05',Jun:'06',Jul:'07',Ago:'08',Sep:'09',Oct:'10',Nov:'11',Dic:'12'};
+const MONTH_ABR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NUM = {
+  Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12',
+  Ene:'01',Abr:'04',Ago:'08',Dic:'12'  // backward-compat for any records saved with old Spanish names
+};
 
 function fechaToISO(fecha) {
   if (!fecha || typeof fecha !== 'string') return '';
@@ -1043,7 +1046,7 @@ function isoToFecha(iso) {
   const parts = iso.split('-');
   if (parts.length < 3) return iso;
   const [, m, d] = parts;
-  return `${parseInt(d)}-${MONTH_ABR[parseInt(m)-1]}`;
+  return `${d}-${MONTH_ABR[parseInt(m)-1]}`;
 }
 function getDayName(iso) {
   const DAYS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
