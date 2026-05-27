@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Europa 2026 · Valeria</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌏</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root {
@@ -986,9 +987,9 @@
     font-size: 0.6rem;
     font-weight: 700;
   }
-  .pagos-cuota-dot.paid { background: var(--vacation); border-color: var(--vacation); color: #0f1419; }
-  .pagos-cuota-dot.pending { background: transparent; color: var(--text-dim); }
-  .pagos-cuota-dot.overdue { background: #ef444430; border-color: #ef4444; color: #ef4444; }
+  .pagos-cuota-dot.paid    { background: var(--vacation); border-color: var(--vacation); color: #0f1419; font-size: 0.65rem; }
+  .pagos-cuota-dot.pending { background: var(--surface); border-color: var(--border); color: var(--text-dim); }
+  .pagos-cuota-dot.overdue { background: #f7c94830; border-color: var(--work); color: var(--work); }
 </style>
 </head>
 <body>
@@ -1092,10 +1093,15 @@
   <div id="view-pagos" class="hidden">
     <div id="pagosFilterBar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;"></div>
     <div class="pagos-stats-row" id="pagosStats"></div>
-    <div class="summary-section">
-      <h2>📅 Calendario de Pagos</h2>
-      <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Fechas en las que vencen los pagos programados:</p>
-      <div id="pagosCalendar"></div>
+    <div class="summary-section" style="padding-bottom:0;">
+      <h2 id="pagosCalHeader" style="cursor:pointer;user-select:none;display:flex;align-items:center;padding-bottom:16px;">
+        📅 Calendario de Pagos
+        <span id="pagosCalChevron" style="margin-left:auto;font-size:0.75rem;color:var(--text-dim);font-weight:400;letter-spacing:0.02em;">Ver ▾</span>
+      </h2>
+      <div id="pagosCalBody" class="hidden" style="padding-bottom:16px;">
+        <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Fechas en las que vencen los pagos programados:</p>
+        <div id="pagosCalendar"></div>
+      </div>
     </div>
     <div class="pagos-charts-row">
       <div class="summary-section">
@@ -1496,8 +1502,10 @@ let calendarMode   = false;
 let resPayFilter   = 'all';
 let pagosBarChart       = null;
 let pagosPieChart       = null;
-let pagosFiltroPersona  = null;
+let pagosFilterPersonas = []; // [] = all, [...names] = filter to those people
+let pagosCalExpanded    = false;
 let _pagosListenerReady = false;
+let _pagosCalListenerReady = false;
 let map            = null;
 let cityMarkers    = {};
 let cityDetailMap  = null;
@@ -2312,27 +2320,31 @@ function renderReservations() {
 // and _efectivo* amounts (already multiplied by share).
 function getPagosViewData() {
   const { compras, participantes, personas } = pagosData;
-  if (!pagosFiltroPersona) {
+  if (!pagosFilterPersonas.length) {
     return compras.map(c => ({
       ...c,
       _share: 1,
-      _efectivoTotal:    c.valor_total || 0,
-      _efectivoPagado:   c.valor_cuota * c.cuotas_pagadas,
+      _selectedNames: [],
+      _efectivoTotal:     c.valor_total || 0,
+      _efectivoPagado:    c.valor_cuota * c.cuotas_pagadas,
       _efectivoPendiente: c.faltante_total || 0,
     }));
   }
-  const persona = personas.find(p => p.nombre === pagosFiltroPersona);
-  if (!persona) return [];
+  const selectedIds = new Set(
+    personas.filter(p => pagosFilterPersonas.includes(p.nombre)).map(p => p.id)
+  );
   return compras
-    .filter(c => participantes.some(p => p.compra_id === c.id && p.persona_id === persona.id))
+    .filter(c => participantes.some(p => p.compra_id === c.id && selectedIds.has(p.persona_id)))
     .map(c => {
-      const numParts = participantes.filter(p => p.compra_id === c.id).length || 1;
-      const share = 1 / numParts;
+      const allParts      = participantes.filter(p => p.compra_id === c.id);
+      const selectedParts = allParts.filter(p => selectedIds.has(p.persona_id));
+      const share = allParts.length ? selectedParts.length / allParts.length : 1;
       return {
         ...c,
         _share: share,
-        _efectivoTotal:    (c.valor_total || 0) * share,
-        _efectivoPagado:   c.valor_cuota * c.cuotas_pagadas * share,
+        _selectedNames: selectedParts.map(p => personas.find(pe => pe.id === p.persona_id)?.nombre).filter(Boolean),
+        _efectivoTotal:     (c.valor_total || 0) * share,
+        _efectivoPagado:    c.valor_cuota * c.cuotas_pagadas * share,
         _efectivoPendiente: (c.faltante_total || 0) * share,
       };
     });
@@ -2352,10 +2364,9 @@ async function togglePagoCuota(pagoId) {
 
     const compra = pagosData.compras.find(c => c.id === pago.compra_id);
     if (compra) {
-      const newCuotas   = Math.max(0, compra.cuotas_pagadas + (newPagado ? 1 : -1));
-      const newFaltante = compra.valor_cuota * (compra.cuotas_totales - newCuotas);
+      const newCuotas = Math.max(0, compra.cuotas_pagadas + (newPagado ? 1 : -1));
       const { error: e2 } = await sb.from('compras')
-        .update({ cuotas_pagadas: newCuotas, faltante_total: newFaltante })
+        .update({ cuotas_pagadas: newCuotas })
         .eq('id', compra.id);
       if (e2) throw e2;
     }
@@ -2371,6 +2382,13 @@ async function togglePagoCuota(pagoId) {
   }
 }
 
+const RLS_SQL = `-- Ejecuta esto en el SQL Editor de Supabase (supabase.com → proyecto → SQL Editor)
+
+ALTER TABLE public.compras              DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pagos                DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.personas             DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.compra_participantes DISABLE ROW LEVEL SECURITY;`;
+
 async function loadAndRenderPagos() {
   const statsEl = document.getElementById('pagosStats');
   statsEl.innerHTML = `<div style="grid-column:1/-1;color:var(--text-dim);font-size:0.85rem;padding:8px 0;">Cargando datos de pagos…</div>`;
@@ -2379,6 +2397,31 @@ async function loadAndRenderPagos() {
       dbLoadCompras(), dbLoadPagos(), dbLoadPersonas(), dbLoadParticipantes()
     ]);
     pagosData = { compras, pagos, personas, participantes };
+
+    const empty = !compras.length && !personas.length && !pagos.length;
+    if (empty) {
+      statsEl.innerHTML = `
+        <div style="grid-column:1/-1;background:var(--surface);border:1px solid #f7c94840;border-radius:14px;padding:20px 22px;">
+          <div style="font-size:1rem;font-weight:700;color:var(--work);margin-bottom:10px;">⚠ No se encontraron datos</div>
+          <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:14px;line-height:1.6;">
+            Las tablas de pagos están vacías o <strong style="color:var(--text)">RLS (Row Level Security)</strong> está
+            bloqueando el acceso. Como las tablas <code style="background:var(--surface-2);padding:1px 5px;border-radius:4px;">actividades</code>
+            y <code style="background:var(--surface-2);padding:1px 5px;border-radius:4px;">reservas</code> ya funcionan,
+            lo más probable es que las 4 tablas nuevas tengan RLS habilitado sin política de lectura.
+          </p>
+          <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:10px;">
+            Abre el <strong style="color:var(--text)">SQL Editor</strong> en tu proyecto de Supabase y ejecuta:
+          </p>
+          <pre id="rlsSqlBlock" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:0.78rem;color:#9aa4b2;overflow-x:auto;white-space:pre;line-height:1.6;margin-bottom:12px;">${RLS_SQL}</pre>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button onclick="navigator.clipboard.writeText(document.getElementById('rlsSqlBlock').textContent).then(()=>{this.textContent='✓ Copiado';setTimeout(()=>{this.textContent='📋 Copiar SQL'},1500)})"
+              style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;">📋 Copiar SQL</button>
+            <button onclick="loadAndRenderPagos()"
+              style="background:var(--accent);color:white;border:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;">↺ Reintentar</button>
+          </div>
+        </div>`;
+      return;
+    }
     renderPagos();
   } catch(err) {
     statsEl.innerHTML = `
@@ -2402,20 +2445,79 @@ function renderPagos() {
 function renderPagosFilterBar() {
   const bar = document.getElementById('pagosFilterBar');
   const { personas } = pagosData;
-  const opts = [{ label: 'Todos', value: null }, ...personas.map(p => ({ label: p.nombre, value: p.nombre }))];
+  if (!personas.length) { bar.innerHTML = ''; return; }
+
+  const label = pagosFilterPersonas.length
+    ? pagosFilterPersonas.join(', ')
+    : 'Todos';
+  const isFiltered = pagosFilterPersonas.length > 0;
+
   bar.innerHTML = `
     <span style="font-size:0.75rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">Persona:</span>
-    ${opts.map(o => {
-      const active = pagosFiltroPersona === o.value;
-      return `<button class="city-filter-btn${active ? ' active' : ''}" data-pval="${o.value ?? ''}"
-        style="${active ? 'background:var(--accent);border-color:var(--accent);color:white;' : ''}">${o.label}</button>`;
-    }).join('')}`;
-  bar.querySelectorAll('button').forEach(btn => {
-    btn.onclick = () => {
-      pagosFiltroPersona = btn.dataset.pval || null;
+    <div style="position:relative;">
+      <button id="pagosDropdownBtn" style="
+        display:flex;align-items:center;gap:8px;
+        background:${isFiltered ? 'var(--accent)' : 'var(--surface)'};
+        border:1px solid ${isFiltered ? 'var(--accent)' : 'var(--border)'};
+        color:${isFiltered ? 'white' : 'var(--text)'};
+        padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;font-family:inherit;
+        min-width:140px;justify-content:space-between;">
+        <span>${label}</span><span style="font-size:0.65rem;opacity:0.7;">▾</span>
+      </button>
+      <div id="pagosDropdown" class="hidden" style="
+        position:absolute;top:calc(100% + 4px);left:0;z-index:200;
+        background:var(--surface);border:1px solid var(--border);border-radius:10px;
+        padding:8px 6px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+        <div style="padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px;">
+          <button id="pagosClearFilter" style="font-size:0.75rem;color:var(--text-dim);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;">
+            ${isFiltered ? '✕ Limpiar filtro' : ''}
+          </button>
+        </div>
+        ${personas.map(p => {
+          const checked = pagosFilterPersonas.includes(p.nombre);
+          return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.85rem;transition:background 0.1s;"
+            onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+            <input type="checkbox" data-nombre="${p.nombre}" ${checked ? 'checked' : ''}
+              style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0;">
+            ${p.nombre}
+          </label>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  const btn      = document.getElementById('pagosDropdownBtn');
+  const dropdown = document.getElementById('pagosDropdown');
+
+  btn.onclick = e => {
+    e.stopPropagation();
+    dropdown.classList.toggle('hidden');
+  };
+  document.getElementById('pagosClearFilter').onclick = e => {
+    e.stopPropagation();
+    pagosFilterPersonas = [];
+    dropdown.classList.add('hidden');
+    renderPagos();
+  };
+  dropdown.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.onchange = () => {
+      const nombre = cb.dataset.nombre;
+      if (cb.checked) {
+        if (!pagosFilterPersonas.includes(nombre)) pagosFilterPersonas.push(nombre);
+      } else {
+        pagosFilterPersonas = pagosFilterPersonas.filter(n => n !== nombre);
+      }
       renderPagos();
     };
   });
+
+  // Close dropdown on outside click
+  const closeDropdown = e => {
+    if (!bar.contains(e.target)) {
+      dropdown.classList.add('hidden');
+      document.removeEventListener('click', closeDropdown);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeDropdown), 0);
 }
 
 function renderPagosStats() {
@@ -2444,6 +2546,18 @@ function renderPagosStats() {
 }
 
 function renderPagosCalendar() {
+  // Wire header toggle once
+  if (!_pagosCalListenerReady) {
+    _pagosCalListenerReady = true;
+    document.getElementById('pagosCalHeader').addEventListener('click', () => {
+      pagosCalExpanded = !pagosCalExpanded;
+      document.getElementById('pagosCalBody').classList.toggle('hidden', !pagosCalExpanded);
+      document.getElementById('pagosCalChevron').textContent = pagosCalExpanded ? 'Ocultar ▴' : 'Ver ▾';
+    });
+  }
+  // Don't re-render content if collapsed
+  if (!pagosCalExpanded) return;
+
   const container = document.getElementById('pagosCalendar');
   container.innerHTML = '';
   const { pagos } = pagosData;
@@ -2612,7 +2726,8 @@ function renderPagosPie() {
     });
   }
 
-  if (pagosFiltroPersona) {
+  if (pagosFilterPersonas.length) {
+    // Filtered view: per-compra breakdown for selected people
     const viewData = getPagosViewData();
     const entries  = viewData.filter(c => c._efectivoPendiente > 0.01)
                              .map(c => [c.descripcion.length > 22 ? c.descripcion.slice(0,20)+'…' : c.descripcion, +c._efectivoPendiente.toFixed(2)]);
@@ -2667,7 +2782,7 @@ function renderPagosCompraList() {
   container.innerHTML = viewData.map(c => {
     const pct = c.cuotas_totales ? Math.round((c.cuotas_pagadas / c.cuotas_totales) * 100) : 0;
     const cuotaPayments = pagos.filter(p => p.compra_id === c.id).sort((a,b) => a.numero_cuota - b.numero_cuota);
-    const shareLabel    = c._share < 1 ? ` <span style="color:var(--text-dim);font-size:0.7rem;">(tu parte: 1/${Math.round(1/c._share)})</span>` : '';
+    const shareLabel    = c._share < 1 ? ` <span style="color:var(--text-dim);font-size:0.7rem;">(${c._selectedNames?.join(' + ') || 'parte'}: ${Math.round(c._share*100)}%)</span>` : '';
     const dots = Array.from({ length: c.cuotas_totales }, (_, i) => {
       const pago     = cuotaPayments.find(p => p.numero_cuota === i + 1);
       const isPaid   = pago?.pagado;
@@ -2677,7 +2792,8 @@ function renderPagosCompraList() {
         ? `Cuota ${i+1} · $${Math.round(pago.valor_cuota * c._share).toLocaleString('es-CO')} · ${pago.fecha_pago}${isPaid ? ' ✓ Pagada' : isOverdue ? ' ⚠ Vencida' : ' ⏳ Pendiente'}\nClic para marcar como ${isPaid ? 'no pagada' : 'pagada'}`
         : `Cuota ${i+1}`;
       const pagoId = pago?.id ?? '';
-      return `<div class="pagos-cuota-dot ${cls}" data-pago-id="${pagoId}" title="${tip}" style="${pagoId ? 'cursor:pointer;' : ''}">${i+1}</div>`;
+      const label = isPaid ? '✓' : (i + 1);
+      return `<div class="pagos-cuota-dot ${cls}" data-pago-id="${pagoId}" title="${tip}" style="${pagoId ? 'cursor:pointer;' : ''}">${label}</div>`;
     }).join('');
     const faltante = c._efectivoPendiente;
     return `
