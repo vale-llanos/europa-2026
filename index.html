@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Europa 2026</title>
+<title>Europa 2026 · Valeria</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌏</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root {
@@ -1474,14 +1473,6 @@ async function loadData() {
   showLoading(true);
   try {
     await checkAndSeedDatabase();
-    try {
-      const [compras, pagos, personas, participantes] = await Promise.all([
-        dbLoadCompras(), dbLoadPagos(), dbLoadPersonas(), dbLoadParticipantes()
-      ]);
-      pagosData = { compras, pagos, personas, participantes };
-    } catch(e) {
-      console.warn('Could not load pagos data:', e.message);
-    }
   } catch (err) {
     console.warn('Supabase unavailable, using local fallback:', err.message);
     try {
@@ -2380,6 +2371,25 @@ async function togglePagoCuota(pagoId) {
   }
 }
 
+async function loadAndRenderPagos() {
+  const statsEl = document.getElementById('pagosStats');
+  statsEl.innerHTML = `<div style="grid-column:1/-1;color:var(--text-dim);font-size:0.85rem;padding:8px 0;">Cargando datos de pagos…</div>`;
+  try {
+    const [compras, pagos, personas, participantes] = await Promise.all([
+      dbLoadCompras(), dbLoadPagos(), dbLoadPersonas(), dbLoadParticipantes()
+    ]);
+    pagosData = { compras, pagos, personas, participantes };
+    renderPagos();
+  } catch(err) {
+    statsEl.innerHTML = `
+      <div style="grid-column:1/-1;background:var(--surface);border:1px solid #ef444440;border-radius:12px;padding:16px;color:#ef4444;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <span>⚠ Error al cargar: <strong>${err.message}</strong></span>
+        <button onclick="loadAndRenderPagos()" style="background:var(--accent);color:white;border:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">↺ Reintentar</button>
+      </div>`;
+    console.error('Pagos load error:', err);
+  }
+}
+
 function renderPagos() {
   renderPagosFilterBar();
   renderPagosStats();
@@ -2419,11 +2429,12 @@ function renderPagosStats() {
   const totalFaltante = viewData.reduce((s, c) => s + c._efectivoPendiente, 0);
   const cuotasPend    = pagos.filter(p => !p.pagado && compraIds.has(p.compra_id)).length;
 
+  const fmtCOP = n => '$' + Math.round(n).toLocaleString('es-CO');
   const stats = [
-    { label: 'Total compras',    value: `€${totalGlobal.toFixed(2)}`,   color: 'var(--text)' },
-    { label: 'Pagado',           value: `€${totalPagado.toFixed(2)}`,   color: 'var(--vacation)' },
-    { label: 'Pendiente',        value: `€${totalFaltante.toFixed(2)}`, color: 'var(--accent)' },
-    { label: 'Cuotas por pagar', value: cuotasPend,                     color: 'var(--work)' },
+    { label: 'Total compras',    value: fmtCOP(totalGlobal),   color: 'var(--text)' },
+    { label: 'Pagado',           value: fmtCOP(totalPagado),   color: 'var(--vacation)' },
+    { label: 'Pendiente',        value: fmtCOP(totalFaltante), color: 'var(--accent)' },
+    { label: 'Cuotas por pagar', value: cuotasPend,            color: 'var(--work)' },
   ];
   el.innerHTML = stats.map(s => `
     <div class="pagos-stat-card">
@@ -2507,11 +2518,11 @@ function renderPagosCalendar() {
         const isOverdue = !allPaid && new Date(dateStr + 'T00:00:00') < today;
         const total = dayPayments.reduce((s, p) => s + p._amount, 0);
         dayEl.className = `cal-day ${allPaid ? 'cal-vac' : 'cal-work'} pagos-cal-has-payment`;
-        dayEl.title = `${dateStr}\n€${total.toFixed(2)} — ${dayPayments.length} pago(s)\n${allPaid ? '✓ Pagado' : isOverdue ? '⚠ Vencido' : '⏳ Pendiente'}`;
+        dayEl.title = `${dateStr}\n$${Math.round(total).toLocaleString('es-CO')} — ${dayPayments.length} pago(s)\n${allPaid ? '✓ Pagado' : isOverdue ? '⚠ Vencido' : '⏳ Pendiente'}`;
         dayEl.appendChild(numEl);
         const amtEl = document.createElement('div');
         amtEl.style.cssText = 'font-size:0.45rem;font-weight:700;line-height:1;margin-top:1px;';
-        amtEl.textContent = `€${Math.round(total)}`;
+        amtEl.textContent = `$${Math.round(total)}`;
         dayEl.appendChild(amtEl);
       } else {
         dayEl.className = 'cal-day cal-normal';
@@ -2564,10 +2575,10 @@ function renderPagosBar() {
       maintainAspectRatio: false,
       plugins: {
         legend: { labels: { color: '#e8ecf1', font: { size: 12 } } },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: €${ctx.raw.toFixed(2)}` } }
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString('es-CO')}` } }
       },
       scales: {
-        x: { stacked: true, ticks: { color: '#9aa4b2', callback: v => `€${v}` }, grid: { color: '#2d3441' } },
+        x: { stacked: true, ticks: { color: '#9aa4b2', callback: v => `$${Math.round(v).toLocaleString('es-CO')}` }, grid: { color: '#2d3441' } },
         y: { stacked: true, ticks: { color: '#e8ecf1', font: { size: 11 } }, grid: { color: '#2d3441' } }
       }
     }
@@ -2596,7 +2607,7 @@ function renderPagosPie() {
       },
       options: { responsive: true, maintainAspectRatio: false, plugins: {
         legend: { position: 'bottom', labels: { color: '#e8ecf1', padding: 12, font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: €${ctx.raw.toFixed(2)}` } }
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: $${Math.round(ctx.raw).toLocaleString('es-CO')}` } }
       }}
     });
   }
@@ -2663,7 +2674,7 @@ function renderPagosCompraList() {
       const isOverdue = pago && !isPaid && new Date(pago.fecha_pago + 'T00:00:00') < today;
       const cls  = isPaid ? 'paid' : (isOverdue ? 'overdue' : 'pending');
       const tip  = pago
-        ? `Cuota ${i+1} · €${(pago.valor_cuota * c._share).toFixed(2)} · ${pago.fecha_pago}${isPaid ? ' ✓ Pagada' : isOverdue ? ' ⚠ Vencida' : ' ⏳ Pendiente'}\nClic para marcar como ${isPaid ? 'no pagada' : 'pagada'}`
+        ? `Cuota ${i+1} · $${Math.round(pago.valor_cuota * c._share).toLocaleString('es-CO')} · ${pago.fecha_pago}${isPaid ? ' ✓ Pagada' : isOverdue ? ' ⚠ Vencida' : ' ⏳ Pendiente'}\nClic para marcar como ${isPaid ? 'no pagada' : 'pagada'}`
         : `Cuota ${i+1}`;
       const pagoId = pago?.id ?? '';
       return `<div class="pagos-cuota-dot ${cls}" data-pago-id="${pagoId}" title="${tip}" style="${pagoId ? 'cursor:pointer;' : ''}">${i+1}</div>`;
@@ -2674,12 +2685,12 @@ function renderPagosCompraList() {
         <div class="pagos-compra-head">
           <div class="pagos-compra-name">${c.descripcion}${shareLabel}</div>
           <div style="text-align:right;flex-shrink:0;">
-            <div style="font-size:0.75rem;color:var(--text-dim);">Total: <strong style="color:var(--text)">€${c._efectivoTotal.toFixed(2)}</strong></div>
-            <div style="font-size:0.75rem;color:var(--accent);">Faltante: €${faltante.toFixed(2)}</div>
+            <div style="font-size:0.75rem;color:var(--text-dim);">Total: <strong style="color:var(--text)">$${Math.round(c._efectivoTotal).toLocaleString('es-CO')}</strong></div>
+            <div style="font-size:0.75rem;color:var(--accent);">Faltante: $${Math.round(faltante).toLocaleString('es-CO')}</div>
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:6px;">
-          ${c.cuotas_pagadas} / ${c.cuotas_totales} cuotas · €${(c.valor_cuota * c._share).toFixed(2)} c/u · Vence: ${c.fecha_pago}
+          ${c.cuotas_pagadas} / ${c.cuotas_totales} cuotas · $${Math.round(c.valor_cuota * c._share).toLocaleString('es-CO')} c/u · Vence: ${c.fecha_pago}
         </div>
         <div class="pagos-progress-bar"><div class="pagos-progress-fill" style="width:${pct}%"></div></div>
         <div class="pagos-cuota-grid">${dots}</div>
@@ -2713,7 +2724,7 @@ function switchView(view) {
   } else if (view === 'reservations') {
     renderReservations();
   } else if (view === 'pagos') {
-    renderPagos();
+    loadAndRenderPagos();
   }
   // city-detail: content rendered before this call in openCity
 }
