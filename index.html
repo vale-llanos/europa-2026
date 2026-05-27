@@ -1112,10 +1112,10 @@
         </div>
       </div>
       <div class="summary-section">
-        <h2>🧑‍🤝‍🧑 Faltante por Persona</h2>
-        <div id="pagosPieWrap" style="position:relative;height:300px;display:flex;align-items:center;justify-content:center;">
-          <div id="pagosPieMsg" style="display:none;text-align:center;padding:20px;"></div>
-          <canvas id="pagosPieCanvas" style="max-height:280px;max-width:280px;"></canvas>
+        <h2>📆 Pagos por Mes</h2>
+        <div style="position:relative;height:300px;">
+          <div id="pagosMonthMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div>
+          <canvas id="pagosMonthCanvas"></canvas>
         </div>
       </div>
     </div>
@@ -1501,7 +1501,7 @@ let currentVacFilter = 'all';
 let calendarMode   = false;
 let resPayFilter   = 'all';
 let pagosBarChart       = null;
-let pagosPieChart       = null;
+let pagosMonthChart     = null;
 let pagosFilterPersonas = []; // [] = all, [...names] = filter to those people
 let pagosCalExpanded    = false;
 let _pagosListenerReady = false;
@@ -2438,7 +2438,7 @@ function renderPagos() {
   renderPagosStats();
   renderPagosCalendar();
   renderPagosBar();
-  renderPagosPie();
+  renderPagosMonthlyBar();
   renderPagosCompraList();
 }
 
@@ -2536,7 +2536,6 @@ function renderPagosStats() {
     { label: 'Total compras',    value: fmtCOP(totalGlobal),   color: 'var(--text)' },
     { label: 'Pagado',           value: fmtCOP(totalPagado),   color: 'var(--vacation)' },
     { label: 'Pendiente',        value: fmtCOP(totalFaltante), color: 'var(--accent)' },
-    { label: 'Cuotas por pagar', value: cuotasPend,            color: 'var(--work)' },
   ];
   el.innerHTML = stats.map(s => `
     <div class="pagos-stat-card">
@@ -2553,6 +2552,7 @@ function renderPagosCalendar() {
       pagosCalExpanded = !pagosCalExpanded;
       document.getElementById('pagosCalBody').classList.toggle('hidden', !pagosCalExpanded);
       document.getElementById('pagosCalChevron').textContent = pagosCalExpanded ? 'Ocultar ▴' : 'Ver ▾';
+      if (pagosCalExpanded) renderPagosCalendar();
     });
   }
   // Don't re-render content if collapsed
@@ -2699,64 +2699,87 @@ function renderPagosBar() {
   });
 }
 
-function renderPagosPie() {
-  const canvas = document.getElementById('pagosPieCanvas');
-  const msg    = document.getElementById('pagosPieMsg');
-  if (pagosPieChart) { pagosPieChart.destroy(); pagosPieChart = null; }
-  const { compras, participantes, personas } = pagosData;
-  const COLORS = ['#ff7849','#5db8ff','#f7c948','#ec407a','#b388ff','#46c47c','#29b6f6','#ffab40'];
+function renderPagosMonthlyBar() {
+  const canvas = document.getElementById('pagosMonthCanvas');
+  const msg    = document.getElementById('pagosMonthMsg');
+  if (pagosMonthChart) { pagosMonthChart.destroy(); pagosMonthChart = null; }
 
-  function showPieMsg(text, color) {
+  const { pagos } = pagosData;
+  const viewData  = getPagosViewData();
+  const compraIds = new Set(viewData.map(c => c.id));
+  const filtered  = pagos.filter(p => compraIds.has(p.compra_id));
+
+  if (!filtered.length) {
     canvas.style.display = 'none';
-    msg.style.display = ''; msg.style.color = color || 'var(--text-dim)';
-    msg.style.fontWeight = color ? '700' : ''; msg.textContent = text;
-  }
-  function showPieChart(entries) {
-    canvas.style.display = ''; msg.style.display = 'none';
-    pagosPieChart = new Chart(canvas, {
-      type: 'doughnut',
-      data: {
-        labels: entries.map(([k]) => k),
-        datasets: [{ data: entries.map(([,v]) => v), backgroundColor: COLORS.slice(0, entries.length).map(c => c + 'cc'), borderColor: COLORS.slice(0, entries.length), borderWidth: 2 }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: {
-        legend: { position: 'bottom', labels: { color: '#e8ecf1', padding: 12, font: { size: 11 } } },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: $${Math.round(ctx.raw).toLocaleString('es-CO')}` } }
-      }}
-    });
-  }
-
-  if (pagosFilterPersonas.length) {
-    // Filtered view: per-compra breakdown for selected people
-    const viewData = getPagosViewData();
-    const entries  = viewData.filter(c => c._efectivoPendiente > 0.01)
-                             .map(c => [c.descripcion.length > 22 ? c.descripcion.slice(0,20)+'…' : c.descripcion, +c._efectivoPendiente.toFixed(2)]);
-    if (!entries.length) { showPieMsg('¡Todo pagado! 🎉', 'var(--vacation)'); return; }
-    showPieChart(entries);
+    msg.style.display = ''; msg.textContent = 'No hay pagos registrados.';
     return;
   }
+  canvas.style.display = ''; msg.style.display = 'none';
 
-  if (!personas.length || !participantes.length) {
-    showPieMsg('Sin datos de participantes.'); return;
-  }
+  const MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-  const personaMap = {};
-  personas.forEach(p => { personaMap[p.id] = p.nombre; });
-  const totals = {};
-  personas.forEach(p => { totals[p.nombre] = 0; });
-  compras.forEach(compra => {
-    const parts = participantes.filter(p => p.compra_id === compra.id);
-    if (!parts.length) return;
-    const share = (compra.faltante_total || 0) / parts.length;
-    parts.forEach(p => {
-      const nombre = personaMap[p.persona_id];
-      if (nombre !== undefined) totals[nombre] = (totals[nombre] || 0) + share;
-    });
+  // Group by month
+  const byMonth = {};
+  filtered.forEach(p => {
+    const d    = new Date(p.fecha_pago + 'T00:00:00');
+    const key  = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const lbl  = `${MES[d.getMonth()]} ${d.getFullYear()}`;
+    if (!byMonth[key]) byMonth[key] = { lbl, paid: 0, pending: 0, detail: {} };
+    const share  = viewData.find(c => c.id === p.compra_id)?._share ?? 1;
+    const amount = p.valor_cuota * share;
+    if (p.pagado) byMonth[key].paid    += amount;
+    else          byMonth[key].pending += amount;
+    if (!byMonth[key].detail[p.compra_id]) byMonth[key].detail[p.compra_id] = { paid: 0, pending: 0 };
+    if (p.pagado) byMonth[key].detail[p.compra_id].paid    += amount;
+    else          byMonth[key].detail[p.compra_id].pending += amount;
   });
 
-  const entries = Object.entries(totals).filter(([, v]) => v > 0.01);
-  if (!entries.length) { showPieMsg('¡Todo pagado! 🎉', 'var(--vacation)'); return; }
-  showPieChart(entries.map(([k,v]) => [k, +v.toFixed(2)]));
+  const sorted = Object.entries(byMonth).sort(([a],[b]) => a.localeCompare(b));
+
+  // Pre-build tooltip footer lines per month
+  const footerRows = sorted.map(([, v]) =>
+    Object.entries(v.detail).map(([cid, amt]) => {
+      const compra  = viewData.find(c => c.id === cid);
+      const reserva = (DATA.reservations || []).find(r => String(r.id) === String(compra?.reserva_id));
+      const name    = compra?.descripcion ?? '—';
+      const res     = reserva ? ` (${reserva.nombre}` + (reserva.precio ? ` · $${Math.round(reserva.precio).toLocaleString('es-CO')}` : '') + ')' : '';
+      return `${name}${res}: $${Math.round(amt.paid + amt.pending).toLocaleString('es-CO')}`;
+    })
+  );
+
+  pagosMonthChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([,v]) => v.lbl),
+      datasets: [
+        { label: 'Pagado',    data: sorted.map(([,v]) => Math.round(v.paid)),    backgroundColor: '#46c47c99', borderColor: '#46c47c', borderWidth: 1, borderRadius: 3 },
+        { label: 'Pendiente', data: sorted.map(([,v]) => Math.round(v.pending)), backgroundColor: '#ff784999', borderColor: '#ff7849', borderWidth: 1, borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#e8ecf1', font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label:  ctx  => ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-CO')}`,
+            footer: items => {
+              const rows = footerRows[items[0]?.dataIndex];
+              if (!rows?.length) return [];
+              return ['', ...rows.map(r => `  · ${r}`)];
+            }
+          },
+          footerFont:  { size: 11 },
+          footerColor: '#9aa4b2',
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: '#9aa4b2' },                                                    grid: { color: '#2d3441' } },
+        y: { stacked: true, ticks: { color: '#9aa4b2', callback: v => `$${Math.round(v).toLocaleString('es-CO')}` }, grid: { color: '#2d3441' } }
+      }
+    }
+  });
 }
 
 function renderPagosCompraList() {
@@ -2780,19 +2803,21 @@ function renderPagosCompraList() {
 
   const today = new Date(); today.setHours(0,0,0,0);
   container.innerHTML = viewData.map(c => {
-    const pct = c.cuotas_totales ? Math.round((c.cuotas_pagadas / c.cuotas_totales) * 100) : 0;
     const cuotaPayments = pagos.filter(p => p.compra_id === c.id).sort((a,b) => a.numero_cuota - b.numero_cuota);
-    const shareLabel    = c._share < 1 ? ` <span style="color:var(--text-dim);font-size:0.7rem;">(${c._selectedNames?.join(' + ') || 'parte'}: ${Math.round(c._share*100)}%)</span>` : '';
+    // Use actual pagos.pagado as source of truth — ignores compras.cuotas_pagadas which may be stale
+    const paidCount = cuotaPayments.filter(p => p.pagado).length;
+    const pct       = c.cuotas_totales ? Math.round((paidCount / c.cuotas_totales) * 100) : 0;
+    const shareLabel = c._share < 1 ? ` <span style="color:var(--text-dim);font-size:0.7rem;">(${c._selectedNames?.join(' + ') || 'parte'}: ${Math.round(c._share*100)}%)</span>` : '';
     const dots = Array.from({ length: c.cuotas_totales }, (_, i) => {
-      const pago     = cuotaPayments.find(p => p.numero_cuota === i + 1);
-      const isPaid   = pago?.pagado;
+      const pago      = cuotaPayments.find(p => p.numero_cuota === i + 1);
+      const isPaid    = pago?.pagado ?? false;
       const isOverdue = pago && !isPaid && new Date(pago.fecha_pago + 'T00:00:00') < today;
-      const cls  = isPaid ? 'paid' : (isOverdue ? 'overdue' : 'pending');
-      const tip  = pago
+      const cls   = isPaid ? 'paid' : (isOverdue ? 'overdue' : 'pending');
+      const tip   = pago
         ? `Cuota ${i+1} · $${Math.round(pago.valor_cuota * c._share).toLocaleString('es-CO')} · ${pago.fecha_pago}${isPaid ? ' ✓ Pagada' : isOverdue ? ' ⚠ Vencida' : ' ⏳ Pendiente'}\nClic para marcar como ${isPaid ? 'no pagada' : 'pagada'}`
         : `Cuota ${i+1}`;
       const pagoId = pago?.id ?? '';
-      const label = isPaid ? '✓' : (i + 1);
+      const label  = isPaid ? '✓' : (i + 1);
       return `<div class="pagos-cuota-dot ${cls}" data-pago-id="${pagoId}" title="${tip}" style="${pagoId ? 'cursor:pointer;' : ''}">${label}</div>`;
     }).join('');
     const faltante = c._efectivoPendiente;
@@ -2806,7 +2831,7 @@ function renderPagosCompraList() {
           </div>
         </div>
         <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:6px;">
-          ${c.cuotas_pagadas} / ${c.cuotas_totales} cuotas · $${Math.round(c.valor_cuota * c._share).toLocaleString('es-CO')} c/u · Vence: ${c.fecha_pago}
+          ${paidCount} / ${c.cuotas_totales} cuotas · $${Math.round(c.valor_cuota * c._share).toLocaleString('es-CO')} c/u · Vence: ${c.fecha_pago}
         </div>
         <div class="pagos-progress-bar"><div class="pagos-progress-fill" style="width:${pct}%"></div></div>
         <div class="pagos-cuota-grid">${dots}</div>
