@@ -1,4 +1,4 @@
-onst CACHE = 'europa-2026-v1';
+const CACHE = 'europa-2026-v1';
 const ASSETS = ['./','./index.html','./icon.svg','./manifest.json'];
 
 self.addEventListener('install', e => {
