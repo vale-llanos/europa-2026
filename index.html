@@ -1028,6 +1028,70 @@
     background: #46c47c15;
     border-color: #46c47c40;
   }
+
+  /* === MOBILE HAMBURGER NAV === */
+  .mobile-header { display: none; }
+  @media (max-width: 640px) {
+    .tabs { display: none; }
+    .mobile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+    }
+    #mobileCurrentTab {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .hamburger-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .hamburger-btn.open { border-color: var(--accent); color: var(--accent); }
+    .mobile-nav-menu {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px;
+      margin-bottom: 16px;
+      margin-top: -10px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .mobile-nav-menu.hidden { display: none; }
+    .mobile-nav-item {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      padding: 13px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .mobile-nav-item.active { background: var(--accent); color: white; }
+    .mobile-nav-item:hover:not(.active) { background: var(--surface-2); color: var(--text); }
+  }
 </style>
 </head>
 <body>
@@ -1049,6 +1113,19 @@
     <button class="tab" data-view="summary">✨ Resumen</button>
     <button class="tab" data-view="reservations">🎫 Reservas</button>
     <button class="tab" data-view="pagos">💳 Pagos</button>
+  </div>
+
+  <!-- MOBILE HAMBURGER NAV -->
+  <div class="mobile-header" id="mobileHeader">
+    <span id="mobileCurrentTab">🏙️ Ciudades</span>
+    <button class="hamburger-btn" id="hamburgerBtn">☰</button>
+  </div>
+  <div class="mobile-nav-menu hidden" id="mobileNavMenu">
+    <button class="mobile-nav-item active" data-view="home">🏙️ Ciudades</button>
+    <button class="mobile-nav-item" data-view="timeline">📅 Cronología</button>
+    <button class="mobile-nav-item" data-view="summary">✨ Resumen</button>
+    <button class="mobile-nav-item" data-view="reservations">🎫 Reservas</button>
+    <button class="mobile-nav-item" data-view="pagos">💳 Pagos</button>
   </div>
 
   <!-- HOME VIEW: map + city cards -->
@@ -2966,6 +3043,18 @@ function renderPagosCompraList() {
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
+function updateMobileNav(view) {
+  const labels = {
+    home:'🏙️ Ciudades', timeline:'📅 Cronología', summary:'✨ Resumen',
+    reservations:'🎫 Reservas', pagos:'💳 Pagos', 'city-detail':'🏙️ Ciudades'
+  };
+  const el = document.getElementById('mobileCurrentTab');
+  if (el) el.textContent = labels[view] || '';
+  document.querySelectorAll('.mobile-nav-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === view || (view === 'city-detail' && btn.dataset.view === 'home'));
+  });
+}
+
 function switchView(view) {
   if (currentView === 'city-detail' && view !== 'city-detail') {
     if (cityDetailMap) { cityDetailMap.remove(); cityDetailMap = null; }
@@ -2993,6 +3082,7 @@ function switchView(view) {
   } else if (view === 'pagos') {
     loadAndRenderPagos();
   }
+  updateMobileNav(view);
   // city-detail: content rendered before this call in openCity
 }
 
@@ -3046,6 +3136,35 @@ document.querySelectorAll('.tab').forEach(t => {
 });
 document.getElementById('backBtn').onclick = () => { currentCity = null; switchView('home'); };
 document.getElementById('cityDetailBackBtn').onclick = () => { currentCity = null; switchView('home'); };
+
+// ── Hamburger menu ────────────────────────────────────────────────────────────
+document.getElementById('hamburgerBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const menu = document.getElementById('mobileNavMenu');
+  const btn  = document.getElementById('hamburgerBtn');
+  const open = !menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', open);
+  btn.classList.toggle('open', !open);
+  btn.textContent = open ? '☰' : '✕';
+});
+document.querySelectorAll('.mobile-nav-item').forEach(btn => {
+  btn.onclick = () => {
+    if (btn.dataset.view === 'timeline' || btn.dataset.view === 'home') currentCity = null;
+    switchView(btn.dataset.view);
+    document.getElementById('mobileNavMenu').classList.add('hidden');
+    document.getElementById('hamburgerBtn').classList.remove('open');
+    document.getElementById('hamburgerBtn').textContent = '☰';
+  };
+});
+document.addEventListener('click', e => {
+  const menu   = document.getElementById('mobileNavMenu');
+  const header = document.getElementById('mobileHeader');
+  if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !header.contains(e.target)) {
+    menu.classList.add('hidden');
+    document.getElementById('hamburgerBtn').classList.remove('open');
+    document.getElementById('hamburgerBtn').textContent = '☰';
+  }
+});
 document.getElementById('calToggle').onclick = () => {
   calendarMode = !calendarMode;
   document.getElementById('calToggle').classList.toggle('active', calendarMode);
@@ -3404,7 +3523,25 @@ function renderNotifBanner() {
   }
 
   if (perm === 'granted') {
-    banner.className = 'notif-banner notif-ok hidden';
+    const personas = pagosData.personas || [];
+    if (!personas.length) { banner.className = 'notif-banner notif-ok hidden'; return; }
+    const saved = localStorage.getItem('europa_notif_persona') || 'all';
+    banner.className = 'notif-banner notif-ok';
+    banner.innerHTML = `
+      <span style="font-size:0.82rem;color:var(--vacation);font-weight:600;">🔔 Notificaciones activas</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:0.78rem;color:var(--text-dim);">Mis pagos:</span>
+        <select id="notifPersonaSelect" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:0.78rem;font-family:inherit;cursor:pointer;">
+          <option value="all" ${saved==='all'?'selected':''}>Todos</option>
+          ${personas.map(p=>`<option value="${p.nombre}" ${saved===p.nombre?'selected':''}>${p.nombre}</option>`).join('')}
+        </select>
+      </div>`;
+    banner.classList.remove('hidden');
+    document.getElementById('notifPersonaSelect').onchange = e => {
+      localStorage.setItem('europa_notif_persona', e.target.value);
+      localStorage.removeItem(NOTIF_KEY);
+      showPaymentNotifications();
+    };
     return;
   }
 
@@ -3426,31 +3563,44 @@ async function showPaymentNotifications() {
   if (Notification.permission !== 'granted') return;
   if (!pagosData.pagos.length) return;
 
-  // Only notify once per day
   const today = new Date().toDateString();
   if (localStorage.getItem(NOTIF_KEY) === today) return;
 
   const now = new Date(); now.setHours(0,0,0,0);
-  const in3  = new Date(now); in3.setDate(in3.getDate() + 3);
+  const in3 = new Date(now); in3.setDate(in3.getDate() + 3);
+
+  // Filter by selected persona
+  const savedPersona = localStorage.getItem('europa_notif_persona') || 'all';
+  let relevantCompraIds = null;
+  if (savedPersona !== 'all' && pagosData.personas.length) {
+    const persona = pagosData.personas.find(p => p.nombre === savedPersona);
+    if (persona) {
+      relevantCompraIds = new Set(
+        pagosData.participantes.filter(p => p.persona_id === persona.id).map(p => p.compra_id)
+      );
+    }
+  }
 
   const due = pagosData.pagos.filter(p => {
     if (p.pagado) return false;
+    if (relevantCompraIds && !relevantCompraIds.has(p.compra_id)) return false;
     const d = new Date(p.fecha_pago + 'T00:00:00');
     return d >= now && d <= in3;
   });
   if (!due.length) return;
 
   const todayDue = due.filter(p => new Date(p.fecha_pago + 'T00:00:00').getTime() === now.getTime());
+  const personaTag = savedPersona !== 'all' ? ` · ${savedPersona}` : '';
   const title = todayDue.length
-    ? `💳 Hoy vencen ${todayDue.length} pago${todayDue.length > 1 ? 's' : ''}`
-    : `💳 ${due.length} pago${due.length > 1 ? 's' : ''} vencen en 3 días`;
+    ? `💳 Hoy vencen ${todayDue.length} pago${todayDue.length > 1 ? 's' : ''}${personaTag}`
+    : `💳 ${due.length} pago${due.length > 1 ? 's' : ''} en 3 días${personaTag}`;
 
   const lines = due.slice(0, 4).map(p => {
     const compra = pagosData.compras.find(c => c.id === p.compra_id);
-    const name   = compra?.descripcion ?? 'Pago';
-    const amt    = Math.round(p.valor_cuota).toLocaleString('es-CO');
-    const diff   = Math.round((new Date(p.fecha_pago + 'T00:00:00') - now) / 86400000);
-    const when   = diff === 0 ? 'Hoy' : diff === 1 ? 'Mañana' : `En ${diff} días`;
+    const name = compra?.descripcion ?? 'Pago';
+    const amt  = Math.round(p.valor_cuota).toLocaleString('es-CO');
+    const diff = Math.round((new Date(p.fecha_pago + 'T00:00:00') - now) / 86400000);
+    const when = diff === 0 ? 'Hoy' : diff === 1 ? 'Mañana' : `En ${diff} días`;
     return `${when} · ${name} $${amt}`;
   });
   if (due.length > 4) lines.push(`…y ${due.length - 4} más`);
@@ -3458,13 +3608,13 @@ async function showPaymentNotifications() {
   try {
     const reg = await navigator.serviceWorker.ready;
     await reg.showNotification(title, {
-      body:      lines.join('\n'),
-      icon:      './icon.svg',
-      badge:     './icon.svg',
-      tag:       'pagos-reminder',
-      renotify:  false,
-      vibrate:   [200, 100, 200],
-      data:      { url: './' }
+      body:     lines.join('\n'),
+      icon:     './icon.svg',
+      badge:    './icon.svg',
+      tag:      'pagos-reminder',
+      renotify: false,
+      vibrate:  [200, 100, 200],
+      data:     { url: './' }
     });
     localStorage.setItem(NOTIF_KEY, today);
   } catch(e) {
