@@ -1,0 +1,19 @@
+{
+  "name": "Europa 2026 · Valeria",
+  "short_name": "Europa 26",
+  "description": "Planificador del eurotrip 2026",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1419",
+  "theme_color": "#ff7849",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
