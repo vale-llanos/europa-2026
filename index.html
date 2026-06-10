@@ -1318,6 +1318,17 @@
   </div>
 </div>
 
+<!-- PAGOS DAY SUMMARY MODAL -->
+<div class="modal-overlay hidden" id="payDaySummaryOverlay">
+  <div class="modal" style="max-width:480px;">
+    <h3>
+      <span id="payDaySummaryTitle"></span>
+      <button class="modal-close" id="payDaySummaryClose">✕</button>
+    </h3>
+    <div id="payDaySummaryContent"></div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
@@ -2544,6 +2555,79 @@ function renderPagosStats() {
     </div>`).join('');
 }
 
+let _payDaySummaryReady = false;
+function showPayDaySummary(dateStr, dayPayments) {
+  if (!_payDaySummaryReady) {
+    _payDaySummaryReady = true;
+    const overlay = document.getElementById('payDaySummaryOverlay');
+    document.getElementById('payDaySummaryClose').onclick = () => overlay.classList.add('hidden');
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.add('hidden'); });
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dayDate = new Date(dateStr + 'T00:00:00');
+  const total = dayPayments.reduce((s, p) => s + p._amount, 0);
+  const allPaid = dayPayments.every(p => p.pagado);
+  const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const titleDate = `${dayDate.getDate()} ${MONTHS_ES[dayDate.getMonth()]} ${dayDate.getFullYear()}`;
+
+  document.getElementById('payDaySummaryTitle').textContent = `📅 Pagos — ${titleDate}`;
+
+  const viewData = getPagosViewData();
+
+  const totalRow = `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:12px;">
+      <span style="color:var(--text-dim);font-size:0.85rem;">${dayPayments.length} pago${dayPayments.length > 1 ? 's' : ''}</span>
+      <span style="font-weight:700;font-size:1.05rem;color:${allPaid ? 'var(--vacation)' : 'var(--accent)'}">$${Math.round(total).toLocaleString('es-CO')}</span>
+    </div>`;
+
+  const items = dayPayments.map(pago => {
+    const compra = viewData.find(c => c.id === pago.compra_id);
+    if (!compra) return '';
+    const reserva = (DATA.reservations || []).find(r => String(r.id) === String(compra.reserva_id));
+    const isOverdue = !pago.pagado && dayDate < today;
+    const statusColor = pago.pagado ? 'var(--vacation)' : (isOverdue ? 'var(--work)' : 'var(--accent)');
+    const statusLabel = pago.pagado ? '✓ Pagado' : (isOverdue ? '⚠ Vencido' : '⏳ Pendiente');
+    const amount = Math.round(pago.valor_cuota * (compra._share ?? 1));
+
+    let resBlock = '';
+    if (reserva) {
+      const tipoEmoji = reserva.tipo === 'Alojamiento' ? '🏨' : reserva.tipo === 'Transporte' ? '🚆' : '🏛️';
+      const metaParts = [
+        reserva.ciudad ? `📍 ${reserva.ciudad}` : '',
+        reserva.fecha  ? `📅 ${reserva.fecha}`  : '',
+        reserva.checkin  ? `In ${reserva.checkin}`   : '',
+        reserva.checkout ? `Out ${reserva.checkout}` : '',
+      ].filter(Boolean).join(' · ');
+      resBlock = `
+        <div style="margin-top:6px;padding:7px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--border);">
+          <div style="font-size:0.78rem;color:var(--text-dim);">
+            ${tipoEmoji} <strong style="color:var(--text)">${reserva.nombre}</strong>${metaParts ? ' · ' + metaParts : ''}
+          </div>
+        </div>`;
+    }
+
+    return `
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:0.92rem;">${compra.descripcion}</div>
+            <div style="font-size:0.78rem;color:var(--text-dim);margin-top:2px;">Cuota ${pago.numero_cuota} de ${compra.cuotas_totales}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-weight:700;color:var(--accent);">$${amount.toLocaleString('es-CO')}</div>
+            <div style="font-size:0.72rem;font-weight:700;color:${statusColor};">${statusLabel}</div>
+          </div>
+        </div>
+        ${resBlock}
+      </div>`;
+  }).join('');
+
+  document.getElementById('payDaySummaryContent').innerHTML = totalRow + items;
+  document.getElementById('payDaySummaryOverlay').classList.remove('hidden');
+}
+
 function renderPagosCalendar() {
   // Wire header toggle once
   if (!_pagosCalListenerReady) {
@@ -2633,6 +2717,7 @@ function renderPagosCalendar() {
         const total = dayPayments.reduce((s, p) => s + p._amount, 0);
         dayEl.className = `cal-day ${allPaid ? 'cal-vac' : 'cal-work'} pagos-cal-has-payment`;
         dayEl.title = `${dateStr}\n$${Math.round(total).toLocaleString('es-CO')} — ${dayPayments.length} pago(s)\n${allPaid ? '✓ Pagado' : isOverdue ? '⚠ Vencido' : '⏳ Pendiente'}`;
+        dayEl.addEventListener('click', () => showPayDaySummary(dateStr, dayPayments));
         dayEl.appendChild(numEl);
         const amtEl = document.createElement('div');
         amtEl.style.cssText = 'font-size:0.45rem;font-weight:700;line-height:1;margin-top:1px;';
