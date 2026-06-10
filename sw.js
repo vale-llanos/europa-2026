@@ -1,4 +1,4 @@
-const CACHE = 'europa-2026-v1';
+onst CACHE = 'europa-2026-v1';
 const ASSETS = ['./','./index.html','./icon.svg','./manifest.json'];
 
 self.addEventListener('install', e => {
@@ -19,11 +19,25 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
-  // Let Supabase, CDN, and geocoding requests go straight to network
+  // Always network: Supabase data, CDNs, geocoding
   if (url.includes('supabase') || url.includes('cdn.jsdelivr') ||
       url.includes('unpkg.com') || url.includes('nominatim') ||
       url.includes('cartocdn') || url.includes('openstreetmap')) return;
 
+  // Network-first for HTML page navigation — always gets latest code when online
+  if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+    e.respondWith(
+      fetch(e.request)
+        .then(resp => {
+          if (resp.ok) caches.open(CACHE).then(c => c.put(e.request, resp.clone()));
+          return resp;
+        })
+        .catch(() => caches.match(e.request)) // offline fallback
+    );
+    return;
+  }
+
+  // Cache-first for other static assets (icons, manifests)
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
