@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ff7849">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Europa 26">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>Europa 2026 · Valeria</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌏</text></svg>">
@@ -990,6 +996,38 @@
   .pagos-cuota-dot.paid    { background: var(--vacation); border-color: var(--vacation); color: #0f1419; font-size: 0.65rem; }
   .pagos-cuota-dot.pending { background: var(--surface); border-color: var(--border); color: var(--text-dim); }
   .pagos-cuota-dot.overdue { background: #f7c94830; border-color: var(--work); color: var(--work); }
+
+  /* === NOTIF BANNER === */
+  .notif-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ff784915;
+    border: 1px solid #ff784940;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 0.85rem;
+  }
+  .notif-banner-text { flex: 1; color: var(--text-dim); }
+  .notif-banner-text strong { color: var(--text); }
+  .notif-enable-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .notif-enable-btn:hover { opacity: 0.85; }
+  .notif-banner.notif-ok {
+    background: #46c47c15;
+    border-color: #46c47c40;
+  }
 </style>
 </head>
 <body>
@@ -1091,6 +1129,7 @@
 
   <!-- PAGOS VIEW -->
   <div id="view-pagos" class="hidden">
+    <div id="notifBanner" class="hidden"></div>
     <div id="pagosFilterBar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;"></div>
     <div class="pagos-stats-row" id="pagosStats"></div>
     <div class="summary-section" style="padding-bottom:0;">
@@ -2434,6 +2473,8 @@ async function loadAndRenderPagos() {
       return;
     }
     renderPagos();
+    renderNotifBanner();
+    showPaymentNotifications();
   } catch(err) {
     statsEl.innerHTML = `
       <div style="grid-column:1/-1;background:var(--surface);border:1px solid #ef444440;border-radius:12px;padding:16px;color:#ef4444;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
@@ -3337,6 +3378,99 @@ document.getElementById('rBtnDelete').onclick    = async () => {
 document.getElementById('resModalOverlay').onclick = e => {
   if (e.target === document.getElementById('resModalOverlay')) closeResModal();
 };
+
+// ── PWA Service Worker ────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(err => console.warn('SW:', err));
+  });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+const NOTIF_KEY = 'europa_notif_date';
+
+function renderNotifBanner() {
+  const banner = document.getElementById('notifBanner');
+  if (!banner || !('Notification' in window)) return;
+
+  const perm = Notification.permission;
+
+  if (perm === 'denied') {
+    banner.className = 'notif-banner';
+    banner.innerHTML = `<span class="notif-banner-text">🔕 Notificaciones bloqueadas. Actívalas en <strong>Configuración → Safari → Notificaciones</strong>.</span>`;
+    banner.classList.remove('hidden');
+    return;
+  }
+
+  if (perm === 'granted') {
+    banner.className = 'notif-banner notif-ok hidden';
+    return;
+  }
+
+  // not-asked yet
+  banner.className = 'notif-banner';
+  banner.innerHTML = `
+    <span class="notif-banner-text">🔔 <strong>Activar notificaciones</strong> — te avisamos el día que vence cada pago.</span>
+    <button class="notif-enable-btn" id="notifEnableBtn">Activar</button>`;
+  banner.classList.remove('hidden');
+  document.getElementById('notifEnableBtn').onclick = async () => {
+    const result = await Notification.requestPermission();
+    renderNotifBanner();
+    if (result === 'granted') showPaymentNotifications();
+  };
+}
+
+async function showPaymentNotifications() {
+  if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  if (!pagosData.pagos.length) return;
+
+  // Only notify once per day
+  const today = new Date().toDateString();
+  if (localStorage.getItem(NOTIF_KEY) === today) return;
+
+  const now = new Date(); now.setHours(0,0,0,0);
+  const in3  = new Date(now); in3.setDate(in3.getDate() + 3);
+
+  const due = pagosData.pagos.filter(p => {
+    if (p.pagado) return false;
+    const d = new Date(p.fecha_pago + 'T00:00:00');
+    return d >= now && d <= in3;
+  });
+  if (!due.length) return;
+
+  const todayDue = due.filter(p => new Date(p.fecha_pago + 'T00:00:00').getTime() === now.getTime());
+  const title = todayDue.length
+    ? `💳 Hoy vencen ${todayDue.length} pago${todayDue.length > 1 ? 's' : ''}`
+    : `💳 ${due.length} pago${due.length > 1 ? 's' : ''} vencen en 3 días`;
+
+  const lines = due.slice(0, 4).map(p => {
+    const compra = pagosData.compras.find(c => c.id === p.compra_id);
+    const name   = compra?.descripcion ?? 'Pago';
+    const amt    = Math.round(p.valor_cuota).toLocaleString('es-CO');
+    const diff   = Math.round((new Date(p.fecha_pago + 'T00:00:00') - now) / 86400000);
+    const when   = diff === 0 ? 'Hoy' : diff === 1 ? 'Mañana' : `En ${diff} días`;
+    return `${when} · ${name} $${amt}`;
+  });
+  if (due.length > 4) lines.push(`…y ${due.length - 4} más`);
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification(title, {
+      body:      lines.join('\n'),
+      icon:      './icon.svg',
+      badge:     './icon.svg',
+      tag:       'pagos-reminder',
+      renotify:  false,
+      vibrate:   [200, 100, 200],
+      data:      { url: './' }
+    });
+    localStorage.setItem(NOTIF_KEY, today);
+  } catch(e) {
+    console.warn('Notification error:', e);
+  }
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function init() {
