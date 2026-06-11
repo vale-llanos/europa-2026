@@ -3961,6 +3961,8 @@ async function showPaymentNotifications() {
   await loadData();
   initFilters();
   switchView('dashboard');
+  // Check payment reminders on every app open (not only when visiting Pagos).
+  ensurePagosData().then(showPaymentNotifications);
 })();
 
 </script>
