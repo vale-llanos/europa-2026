@@ -3897,14 +3897,23 @@ async function showPaymentNotifications() {
   // Filter by selected persona
   const savedPersona = localStorage.getItem('europa_notif_persona') || 'all';
   let relevantCompraIds = null;
+  let selectedPersona = null;
   if (savedPersona !== 'all' && pagosData.personas.length) {
-    const persona = pagosData.personas.find(p => p.nombre === savedPersona);
-    if (persona) {
+    selectedPersona = pagosData.personas.find(p => p.nombre === savedPersona) || null;
+    if (selectedPersona) {
       relevantCompraIds = new Set(
-        pagosData.participantes.filter(p => p.persona_id === persona.id).map(p => p.compra_id)
+        pagosData.participantes.filter(p => p.persona_id === selectedPersona.id).map(p => p.compra_id)
       );
     }
   }
+
+  // The selected person's slice of a cuota (cuota ÷ nº de participantes).
+  // Full amount when no person is selected — same logic as getPagosViewData.
+  const personaShare = compraId => {
+    if (!selectedPersona) return 1;
+    const parts = pagosData.participantes.filter(pp => pp.compra_id === compraId);
+    return parts.length ? parts.filter(pp => pp.persona_id === selectedPersona.id).length / parts.length : 1;
+  };
 
   const due = pagosData.pagos.filter(p => {
     if (p.pagado) return false;
@@ -3923,7 +3932,7 @@ async function showPaymentNotifications() {
   const lines = due.slice(0, 4).map(p => {
     const compra = pagosData.compras.find(c => c.id === p.compra_id);
     const name = compra?.descripcion ?? 'Pago';
-    const amt  = Math.round(p.valor_cuota).toLocaleString('es-CO');
+    const amt  = Math.round(p.valor_cuota * personaShare(p.compra_id)).toLocaleString('es-CO');
     const diff = Math.round((new Date(p.fecha_pago + 'T00:00:00') - now) / 86400000);
     const when = diff === 0 ? 'Hoy' : diff === 1 ? 'Mañana' : `En ${diff} días`;
     return `${when} · ${name} $${amt}`;
