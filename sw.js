@@ -1,4 +1,4 @@
-const CACHE = 'europa-2026-v1';
+const CACHE = 'europa-2026-v2';
 const ASSETS = ['./','./index.html','./icon.svg','./manifest.json'];
 
 self.addEventListener('install', e => {
@@ -47,6 +47,23 @@ self.addEventListener('fetch', e => {
         }
         return resp;
       });
+    })
+  );
+});
+
+// Background push: the scheduled Supabase Edge Function sends {title, body}.
+self.addEventListener('push', e => {
+  let data = { title: '💳 Pago próximo', body: '' };
+  try { if (e.data) data = e.data.json(); } catch (_) {}
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body:     data.body || '',
+      icon:     './icon.svg',
+      badge:    './icon.svg',
+      tag:      'pagos-reminder',
+      renotify: false,
+      vibrate:  [200, 100, 200],
+      data:     { url: './' }
     })
   );
 });

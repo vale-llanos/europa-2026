@@ -3834,6 +3834,47 @@ if ('serviceWorker' in navigator) {
 // ── Notifications ─────────────────────────────────────────────────────────────
 const NOTIF_KEY = 'europa_notif_date';
 
+// ── Web Push (background notifications, even when the app is closed) ───────────
+// Paste your VAPID *public* key here (see PUSH_SETUP.md). Empty = push disabled,
+// the app still shows the in-app reminder when opened.
+const VAPID_PUBLIC_KEY = '';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+// Subscribe this device to Web Push and store the subscription (with the chosen
+// persona) in Supabase, so the scheduled Edge Function can reach it.
+async function registerPushSubscription() {
+  if (!VAPID_PUBLIC_KEY) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    const json = sub.toJSON();
+    await sb.from('push_subscriptions').upsert({
+      endpoint: sub.endpoint,
+      p256dh:   json.keys.p256dh,
+      auth:     json.keys.auth,
+      persona:  localStorage.getItem('europa_notif_persona') || 'all'
+    }, { onConflict: 'endpoint' });
+  } catch (e) {
+    console.warn('Push subscription failed:', e.message);
+  }
+}
+
 function renderNotifBanner() {
   const banner = document.getElementById('notifBanner');
   if (!banner || !('Notification' in window)) return;
@@ -3866,6 +3907,7 @@ function renderNotifBanner() {
       localStorage.setItem('europa_notif_persona', e.target.value);
       localStorage.removeItem(NOTIF_KEY);
       showPaymentNotifications();
+      registerPushSubscription(); // update stored subscription's persona
     };
     return;
   }
@@ -3879,7 +3921,7 @@ function renderNotifBanner() {
   document.getElementById('notifEnableBtn').onclick = async () => {
     const result = await Notification.requestPermission();
     renderNotifBanner();
-    if (result === 'granted') showPaymentNotifications();
+    if (result === 'granted') { showPaymentNotifications(); registerPushSubscription(); }
   };
 }
 
@@ -3963,6 +4005,8 @@ async function showPaymentNotifications() {
   switchView('dashboard');
   // Check payment reminders on every app open (not only when visiting Pagos).
   ensurePagosData().then(showPaymentNotifications);
+  // Keep this device's push subscription registered/fresh.
+  registerPushSubscription();
 })();
 
 </script>
