@@ -10,17 +10,22 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Europa 2026 · Valeria</title>
+<script>
+  // Apply a saved manual theme before first paint. No saved value => CSS
+  // prefers-color-scheme decides (system default).
+  (function () {
+    try {
+      var t = localStorage.getItem('europa_theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌏</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root {
-    --bg: #0f1419;
-    --surface: #1a2028;
-    --surface-2: #232a35;
-    --border: #2d3441;
-    --text: #e8ecf1;
-    --text-dim: #9aa4b2;
+    /* Brand palette — identical in every theme */
     --accent: #ff7849;
     --accent-soft: #ff784920;
     --work: #f7c948;
@@ -29,7 +34,41 @@
     --tourism: #5db8ff;
     --transport: #b388ff;
     --rest: #94a3b8;
+    /* Dark surfaces (default) */
+    --bg: #0f1419;
+    --surface: #1a2028;
+    --surface-2: #232a35;
+    --border: #2d3441;
+    --text: #e8ecf1;
+    --text-dim: #9aa4b2;
+    --shadow: rgba(0,0,0,0.45);
+    color-scheme: dark;
   }
+  /* Light surfaces — brand colors above stay untouched */
+  :root[data-theme="light"] {
+    --bg: #f3f5f8;
+    --surface: #ffffff;
+    --surface-2: #eceff4;
+    --border: #dde2e9;
+    --text: #1a2028;
+    --text-dim: #5b6675;
+    --shadow: rgba(15,20,25,0.12);
+    color-scheme: light;
+  }
+  /* No manual override → follow the operating-system preference */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      --bg: #f3f5f8;
+      --surface: #ffffff;
+      --surface-2: #eceff4;
+      --border: #dde2e9;
+      --text: #1a2028;
+      --text-dim: #5b6675;
+      --shadow: rgba(15,20,25,0.12);
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="dark"] { color-scheme: dark; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
@@ -41,7 +80,7 @@
   header {
     padding: 24px 20px;
     border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, #1a2028 0%, #0f1419 100%);
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
   }
   header h1 {
     font-size: 1.5rem;
@@ -58,37 +97,69 @@
     margin: 0 auto;
     padding: 20px;
   }
-  .tabs {
-    display: flex;
-    gap: 4px;
+  /* === APP BAR (hamburger + theme toggle in header) === */
+  .appbar { display: flex; align-items: center; gap: 14px; }
+  .appbar .titles { min-width: 0; flex: 1; }
+  .icon-button {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 4px;
-    margin-bottom: 24px;
-    overflow-x: auto;
-  }
-  .tab {
-    flex: 1;
-    padding: 10px 16px;
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
-    font-size: 0.9rem;
-    font-weight: 600;
+    color: var(--text);
+    width: 42px; height: 42px;
+    border-radius: 10px;
     cursor: pointer;
-    border-radius: 8px;
-    white-space: nowrap;
+    font-size: 1.15rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
     transition: all 0.15s;
   }
-  .tab.active {
-    background: var(--accent);
-    color: white;
+  .icon-button:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* === NAVIGATION DRAWER === */
+  .drawer-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1500;
+    transition: opacity 0.2s;
   }
-  .tab:hover:not(.active) {
-    color: var(--text);
-    background: var(--surface-2);
+  .drawer-backdrop.hidden { display: none; }
+  .drawer {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 282px; max-width: 82vw;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    z-index: 1600;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    display: flex; flex-direction: column;
+    padding: 18px 14px;
+    box-shadow: 4px 0 28px var(--shadow);
   }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 8px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .drawer-head .brand { font-weight: 800; font-size: 1.02rem; letter-spacing: -0.02em; }
+  .drawer-close { background: none; border: none; color: var(--text-dim); font-size: 1.35rem; cursor: pointer; line-height: 1; padding: 0 4px; }
+  .drawer-close:hover { color: var(--text); }
+  .drawer-item {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%;
+    padding: 13px 14px;
+    background: transparent; border: none;
+    color: var(--text-dim);
+    border-radius: 10px;
+    font-size: 1rem; font-weight: 600;
+    cursor: pointer; text-align: left;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .drawer-item .di-icon { font-size: 1.15rem; width: 24px; text-align: center; flex-shrink: 0; }
+  .drawer-item:hover:not(.active) { background: var(--surface-2); color: var(--text); }
+  .drawer-item.active { background: var(--accent); color: #fff; }
+  .drawer-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
   #map {
     height: 360px;
     border-radius: 12px;
@@ -1028,69 +1099,82 @@
     border-color: #46c47c40;
   }
 
-  /* === MOBILE HAMBURGER NAV === */
-  .mobile-header { display: none; }
-  @media (max-width: 640px) {
-    .tabs { display: none; }
-    .mobile-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 16px;
-      margin-bottom: 16px;
-    }
-    #mobileCurrentTab {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--accent);
-    }
-    .hamburger-btn {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      width: 38px;
-      height: 38px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1.1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s;
-      flex-shrink: 0;
-    }
-    .hamburger-btn.open { border-color: var(--accent); color: var(--accent); }
-    .mobile-nav-menu {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 8px;
-      margin-bottom: 16px;
-      margin-top: -10px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .mobile-nav-menu.hidden { display: none; }
-    .mobile-nav-item {
-      background: transparent;
-      border: none;
-      color: var(--text-dim);
-      padding: 13px 14px;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      text-align: left;
-      font-family: inherit;
-      transition: all 0.15s;
-    }
-    .mobile-nav-item.active { background: var(--accent); color: white; }
-    .mobile-nav-item:hover:not(.active) { background: var(--surface-2); color: var(--text); }
+  /* === SECTION HEADINGS === */
+  .section-block { margin-bottom: 30px; }
+  .section-block:last-child { margin-bottom: 0; }
+  .section-title {
+    font-size: 1.2rem; font-weight: 800; letter-spacing: -0.01em;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 9px;
   }
+  .section-sub { color: var(--text-dim); font-size: 0.85rem; margin: -8px 0 16px; }
+  .section-head-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+
+  /* === KPI CARDS === */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent-bar, var(--accent));
+  }
+  .kpi-card .kpi-label { color: var(--text-dim); font-size: 0.76rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi-card .kpi-value { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+  .kpi-card .kpi-icon { position: absolute; right: 14px; top: 14px; font-size: 1.25rem; opacity: 0.45; }
+
+  /* === QUICK ACTIONS === */
+  .quick-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .quick-action {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px;
+    padding: 10px 16px; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .quick-action:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+  .quick-action.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .quick-action.primary:hover { opacity: 0.9; color: #fff; }
+
+  /* === FINANZAS SUB-TABS === */
+  .subtabs {
+    display: inline-flex; gap: 4px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px; margin-bottom: 24px;
+  }
+  .subtab {
+    padding: 9px 18px; background: transparent; border: none;
+    color: var(--text-dim); font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; border-radius: 8px; white-space: nowrap;
+    font-family: inherit; transition: all 0.15s;
+  }
+  .subtab.active { background: var(--accent); color: #fff; }
+  .subtab:hover:not(.active) { color: var(--text); background: var(--surface-2); }
+
+  /* === CHART GRID (dashboards) === */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px;
+  }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px;
+  }
+  .chart-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
+  .chart-box { position: relative; height: 280px; }
+  .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 20px; }
 </style>
 </head>
 <body>
@@ -1099,42 +1183,96 @@
   <p>Cargando datos...</p>
 </div>
 <header>
-  <div class="container">
-    <h1>🌍 Europa 2026 · Valeria</h1>
-    <div class="sub">25 julio (Bogotá) → 20 agosto (Madrid)</div>
+  <div class="container appbar">
+    <button class="icon-button" id="menuBtn" aria-label="Abrir menú">☰</button>
+    <div class="titles">
+      <h1>🌍 Europa 2026 · Valeria</h1>
+      <div class="sub">25 julio (Bogotá) → 20 agosto (Madrid)</div>
+    </div>
+    <button class="icon-button" id="themeBtn" aria-label="Cambiar tema" title="Cambiar tema claro/oscuro">🌗</button>
   </div>
 </header>
 
+<!-- NAVIGATION DRAWER -->
+<div class="drawer-backdrop hidden" id="drawerBackdrop"></div>
+<nav class="drawer" id="drawer" aria-label="Navegación principal">
+  <div class="drawer-head">
+    <span class="brand">🌍 Europa 2026</span>
+    <button class="drawer-close" id="drawerClose" aria-label="Cerrar menú">✕</button>
+  </div>
+  <button class="drawer-item active" data-nav="dashboard"><span class="di-icon">🏠</span> Home</button>
+  <button class="drawer-item" data-nav="itinerario"><span class="di-icon">🗺️</span> Itinerario</button>
+  <button class="drawer-item" data-nav="finanzas"><span class="di-icon">💶</span> Finanzas</button>
+  <div class="drawer-foot">
+    <button class="drawer-item" id="drawerThemeToggle"><span class="di-icon">🌗</span> Tema:&nbsp;<span id="themeLabel" style="color:var(--text-dim);font-weight:600;"></span></button>
+  </div>
+</nav>
+
 <div class="container">
-  <div class="tabs">
-    <button class="tab active" data-view="home">🏙️ Ciudades</button>
-    <button class="tab" data-view="timeline">📅 Cronología</button>
-    <button class="tab" data-view="summary">✨ Resumen</button>
-    <button class="tab" data-view="reservations">🎫 Reservas</button>
-    <button class="tab" data-view="pagos">💳 Pagos</button>
+
+  <!-- HOME / DASHBOARD -->
+  <div id="view-dashboard">
+    <!-- SECTION 1: Resumen rápido -->
+    <div class="section-block">
+      <div class="section-title">📋 Resumen rápido</div>
+      <div class="kpi-grid" id="dashKpis"></div>
+      <div class="quick-actions" id="dashQuickActions"></div>
+    </div>
+    <!-- SECTION 2: Financiero -->
+    <div class="section-block">
+      <div class="section-title">💶 Financiero</div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>🏙️ Gastos esperados por ciudad</h3>
+          <div id="dashGastosCiudad"></div>
+        </div>
+        <div class="chart-card">
+          <h3>🎫 Resumen de reservas</h3>
+          <div id="dashResumenReservas"></div>
+        </div>
+      </div>
+      <div class="chart-card" style="margin-top:14px;">
+        <h3>📆 Gráfico de pagos por mes</h3>
+        <div class="chart-box">
+          <div id="dashMonthMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div>
+          <canvas id="dashMonthCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- SECTION 3: Vacaciones -->
+    <div class="section-block">
+      <div class="section-title">🏖️ Vacaciones</div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>🏖️ Días de vacaciones</h3>
+          <p class="section-sub" style="margin-top:0;">Días marcados como vacaciones (sin trabajo remoto):</p>
+          <div id="dashVacationList"></div>
+        </div>
+        <div class="chart-card">
+          <h3>💻 Bloques de trabajo remoto</h3>
+          <p class="section-sub" style="margin-top:0;">Horarios marcados como trabajo (3pm-7pm COL aprox):</p>
+          <div id="dashWorkList"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- MOBILE HAMBURGER NAV -->
-  <div class="mobile-header" id="mobileHeader">
-    <span id="mobileCurrentTab">🏙️ Ciudades</span>
-    <button class="hamburger-btn" id="hamburgerBtn">☰</button>
-  </div>
-  <div class="mobile-nav-menu hidden" id="mobileNavMenu">
-    <button class="mobile-nav-item active" data-view="home">🏙️ Ciudades</button>
-    <button class="mobile-nav-item" data-view="timeline">📅 Cronología</button>
-    <button class="mobile-nav-item" data-view="summary">✨ Resumen</button>
-    <button class="mobile-nav-item" data-view="reservations">🎫 Reservas</button>
-    <button class="mobile-nav-item" data-view="pagos">💳 Pagos</button>
-  </div>
-
-  <!-- HOME VIEW: map + city cards -->
-  <div id="view-home">
+  <!-- ITINERARIO: map + city cards (was "Ciudades") -->
+  <div id="view-home" class="hidden">
+    <div class="section-head-row">
+      <div class="section-title" style="margin-bottom:0;">🗺️ Itinerario</div>
+      <button class="quick-action primary" id="editItineraryBtn">✏️ Editar itinerario</button>
+    </div>
     <div id="map"></div>
     <div class="city-grid" id="cityGrid"></div>
   </div>
 
-  <!-- TIMELINE VIEW: day by day -->
+  <!-- CRONOLOGÍA: day-by-day editing mode (reached from Itinerario) -->
   <div id="view-timeline" class="hidden">
+    <div class="section-head-row">
+      <button class="back-btn" id="cronoBackBtn" style="margin-bottom:0;">← Volver al itinerario</button>
+      <div class="section-title" style="margin-bottom:0;">✏️ Editar itinerario · Cronología</div>
+    </div>
     <button class="back-btn hidden" id="backBtn">← Todas las ciudades</button>
     <div class="toolbar">
       <button class="filter-btn" id="calToggle">🗓️ Calendario</button>
@@ -1170,41 +1308,62 @@
     <div id="timeline"></div>
   </div>
 
-  <!-- SUMMARY VIEW: budget + vacations -->
-  <div id="view-summary" class="hidden">
-    <div class="summary-section">
-      <h2>💰 Presupuesto por ciudad</h2>
-      <div id="budgetList"></div>
+  <!-- FINANZAS SECTION: Dashboard Financiero · Reservas · Pagos -->
+  <div id="view-finanzas" class="hidden">
+    <div class="section-title">💶 Finanzas</div>
+    <div class="subtabs" id="finanzasSubtabs">
+      <button class="subtab active" data-sub="findash">📊 Dashboard Financiero</button>
+      <button class="subtab" data-sub="reservations">🎫 Reservas</button>
+      <button class="subtab" data-sub="pagos">💳 Pagos</button>
     </div>
-    <div class="summary-section">
-      <h2>📅 Presupuesto por día</h2>
-      <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Gasto estimado cronológico a lo largo del viaje:</p>
-      <div id="dailyBudgetList"></div>
-    </div>
-    <div class="summary-section">
-      <h2>🏖️ Días de vacaciones</h2>
-      <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Días marcados como vacaciones (sin trabajo remoto):</p>
-      <div id="vacationList"></div>
-    </div>
-    <div class="summary-section">
-      <h2>💻 Bloques de trabajo remoto</h2>
-      <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:12px;">Horarios marcados como trabajo (3pm-7pm COL aprox):</p>
-      <div id="workList"></div>
-    </div>
-    <div class="summary-section">
-      <h2>🎫 Reservas y pagos</h2>
-      <div id="resSummaryList"></div>
-    </div>
-  </div>
 
-  <!-- RESERVATIONS VIEW -->
-  <div id="view-reservations" class="hidden">
-    <div id="resFilterBar" style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;"></div>
-    <div id="reservationsList"></div>
-  </div>
+    <!-- Sub-tab: Dashboard Financiero -->
+    <div id="fin-findash">
+      <p class="section-sub">Resumen de reservas (valores en €). Filtra por persona, ciudad o categoría.</p>
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="finPersona">Persona</label>
+          <select id="finPersona" class="filter-select"><option value="all">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="finCiudad">Ciudad</label>
+          <select id="finCiudad" class="filter-select"><option value="all">Todas</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="finCategoria">Categoría</label>
+          <select id="finCategoria" class="filter-select"><option value="all">Todas</option></select>
+        </div>
+        <button class="filter-btn" id="finClear" style="margin-left:auto;">✕ Limpiar</button>
+      </div>
+      <div class="kpi-grid" id="finKpis" style="margin-bottom:22px;"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>🏙️ Gasto por ciudad</h3>
+          <div class="chart-box"><div id="finCityMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finCityCanvas"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>🏷️ Gasto por categoría</h3>
+          <div class="chart-box"><div id="finCatMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finCatCanvas"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>👤 Gasto por persona (quién paga)</h3>
+          <div class="chart-box"><div id="finPersMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finPersCanvas"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>✅ Pagado vs Pendiente</h3>
+          <div class="chart-box"><div id="finPaidMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finPaidCanvas"></canvas></div>
+        </div>
+      </div>
+    </div>
 
-  <!-- PAGOS VIEW -->
-  <div id="view-pagos" class="hidden">
+    <!-- Sub-tab: Reservas -->
+    <div id="fin-reservations" class="hidden">
+      <div id="resFilterBar" style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;"></div>
+      <div id="reservationsList"></div>
+    </div>
+
+  <!-- Sub-tab: Pagos -->
+  <div id="fin-pagos" class="hidden">
     <div id="notifBanner" class="hidden"></div>
     <div id="pagosFilterBar" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:14px;"></div>
     <div class="pagos-stats-row" id="pagosStats"></div>
@@ -1239,10 +1398,13 @@
       <div class="pagos-compra-list" id="pagosCompraList"></div>
     </div>
   </div>
+  <!-- /fin-pagos -->
+  </div>
+  <!-- /view-finanzas -->
 
   <!-- CITY DETAIL VIEW -->
   <div id="view-city-detail" class="hidden">
-    <button class="back-btn" id="cityDetailBackBtn">← Ciudades</button>
+    <button class="back-btn" id="cityDetailBackBtn">← Itinerario</button>
     <div class="city-detail-header">
       <div id="cityDetailDot" style="width:14px;height:14px;border-radius:50%;flex-shrink:0;"></div>
       <span class="city-detail-title" id="cityDetailTitle"></span>
@@ -1550,6 +1712,19 @@ async function dbLoadParticipantes() {
 // ── Data init ─────────────────────────────────────────────────────────────────
 DATA.reservations = [];
 let pagosData = { compras: [], pagos: [], personas: [], participantes: [] };
+let pagosLoaded = false;
+// Load payment tables once (shared by Home chart + Finanzas). Swallows errors.
+async function ensurePagosData() {
+  if (pagosLoaded) return true;
+  try {
+    const [compras, pagos, personas, participantes] = await Promise.all([
+      dbLoadCompras(), dbLoadPagos(), dbLoadPersonas(), dbLoadParticipantes()
+    ]);
+    pagosData = { compras, pagos, personas, participantes };
+    pagosLoaded = true;
+  } catch (e) { console.warn('Pagos data load failed:', e.message); }
+  return pagosLoaded;
+}
 
 async function seedActividades() {
   const loadMsg = document.querySelector('#loadingOverlay p');
@@ -2082,7 +2257,7 @@ function renderTimeline() {
         }
         DATA.records.splice(globalIdx, 1);
         rerender(); renderCityGrid();
-        if (currentView === 'summary') renderSummary();
+        if (currentView === 'dashboard') renderDashboard();
       };
       dayDiv.appendChild(div);
     });
@@ -2191,149 +2366,248 @@ function renderCalendar() {
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────
-function renderSummary() {
-  // Budget
-  const budgetList = document.getElementById('budgetList');
-  budgetList.innerHTML = '';
-  let total = 0;
+// ── Home dashboard ────────────────────────────────────────────────────────────
+// Headline trip numbers (días / ciudades / presupuesto € / reservas confirmadas).
+function tripStats() {
+  const cities = DATA.cityOrder.filter(c => !TRANSIT_MODES.has(c)).length;
+  const days = new Set(DATA.records.map(r => r.fecha).filter(Boolean)).size;
+  let budget = 0;
+  DATA.cityOrder.forEach(city => {
+    budget += DATA.records.filter(r => r.ciudad === city).reduce((s,r)=>s+(parseFloat(r.presupuesto)||0),0);
+  });
+  budget += DATA.records.filter(r => r.ciudad==='Vuelo'||r.ciudad==='Bus').reduce((s,r)=>s+(parseFloat(r.presupuesto)||0),0);
+  const resConfirmed = DATA.reservations.filter(r => r.payStatus === 'paid').length;
+  return { cities, days, budget, resConfirmed, resTotal: DATA.reservations.length };
+}
+
+function renderDashboard() {
+  const s = tripStats();
+  const kpis = [
+    { label:'Total de días',        value:s.days,                          icon:'📆', color:'var(--tourism)' },
+    { label:'Total de ciudades',    value:s.cities,                        icon:'🏙️', color:'var(--transport)' },
+    { label:'Presupuesto estimado', value:'€'+s.budget.toFixed(0),         icon:'💰', color:'var(--accent)' },
+    { label:'Reservas confirmadas', value:`${s.resConfirmed} / ${s.resTotal}`, icon:'✅', color:'var(--vacation)' },
+  ];
+  document.getElementById('dashKpis').innerHTML = kpis.map(k => `
+    <div class="kpi-card" style="--accent-bar:${k.color};">
+      <span class="kpi-icon">${k.icon}</span>
+      <span class="kpi-label">${k.label}</span>
+      <span class="kpi-value" style="color:${k.color};">${k.value}</span>
+    </div>`).join('');
+
+  const actions = [
+    { label:'🗺️ Ver itinerario',    cls:'primary', act:() => switchView('home') },
+    { label:'🎫 Ver reservas',      cls:'',        act:() => { finSubView='reservations'; switchView('finanzas'); } },
+    { label:'💳 Ver pagos',         cls:'',        act:() => { finSubView='pagos'; switchView('finanzas'); } },
+    { label:'✏️ Editar itinerario', cls:'',        act:() => switchView('timeline') },
+  ];
+  const qa = document.getElementById('dashQuickActions');
+  qa.innerHTML = '';
+  actions.forEach(a => {
+    const b = document.createElement('button');
+    b.className = 'quick-action' + (a.cls ? ' ' + a.cls : '');
+    b.textContent = a.label;
+    b.onclick = a.act;
+    qa.appendChild(b);
+  });
+
+  renderGastosPorCiudad('dashGastosCiudad');
+  renderResumenReservas('dashResumenReservas');
+  renderVacacionesList('dashVacationList');
+  renderTrabajoList('dashWorkList');
+  // Monthly payments chart (COP) — needs the payment tables loaded
+  ensurePagosData().then(() => { if (currentView === 'dashboard') renderDashMonthlyChart(); });
+}
+
+// Gastos esperados por ciudad (presupuesto €) — reused by the Home dashboard.
+function renderGastosPorCiudad(targetId) {
+  const el = document.getElementById(targetId);
+  let total = 0, html = '';
   DATA.cityOrder.forEach(city => {
     const sum = DATA.records.filter(r=>r.ciudad===city).reduce((s,r)=>s+(parseFloat(r.presupuesto)||0),0);
     total += sum;
-    budgetList.innerHTML += `<div class="summary-row"><span class="label">${city}</span><span class="value">€${sum.toFixed(0)}</span></div>`;
+    html += `<div class="summary-row"><span class="label">${city}</span><span class="value">€${sum.toFixed(0)}</span></div>`;
   });
   const transitSum = DATA.records.filter(r=>r.ciudad==='Vuelo'||r.ciudad==='Bus').reduce((s,r)=>s+(parseFloat(r.presupuesto)||0),0);
   total += transitSum;
-  if (transitSum > 0) budgetList.innerHTML += `<div class="summary-row"><span class="label">Tránsito</span><span class="value">€${transitSum.toFixed(0)}</span></div>`;
-  budgetList.innerHTML += `<div class="summary-row" style="margin-top:8px;padding-top:12px;border-top:2px solid var(--accent);"><span class="label" style="color:var(--accent);font-weight:700;">TOTAL ESTIMADO</span><span class="value" style="color:var(--accent);font-size:1.1rem;">€${total.toFixed(0)}</span></div>`;
-  budgetList.innerHTML += `<p style="margin-top:8px;font-size:0.75rem;color:var(--text-dim);">Solo costos detallados en notas. No incluye alojamiento ni vuelos internacionales.</p>`;
-  // Vacation days
-  const vacList = document.getElementById('vacationList');
-  vacList.innerHTML = '';
+  if (transitSum > 0) html += `<div class="summary-row"><span class="label">Tránsito</span><span class="value">€${transitSum.toFixed(0)}</span></div>`;
+  html += `<div class="summary-row" style="margin-top:8px;padding-top:12px;border-top:2px solid var(--accent);"><span class="label" style="color:var(--accent);font-weight:700;">TOTAL ESTIMADO</span><span class="value" style="color:var(--accent);font-size:1.1rem;">€${total.toFixed(0)}</span></div>`;
+  html += `<p style="margin-top:8px;font-size:0.75rem;color:var(--text-dim);">Solo costos detallados en notas. No incluye alojamiento ni vuelos internacionales.</p>`;
+  el.innerHTML = html;
+}
+
+// Resumen de reservas por tipo: total / pagado / pendiente (€).
+function renderResumenReservas(targetId) {
+  const el = document.getElementById(targetId);
+  if (!DATA.reservations.length) {
+    el.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;font-style:italic;">Sin reservas registradas aún.</p>';
+    return;
+  }
+  const TIPOS = [
+    { key:'Alojamiento', label:'🏨 Alojamiento', color:'var(--tourism)' },
+    { key:'Transporte',  label:'🚆 Transporte',  color:'var(--transport)' },
+    { key:'Turismo',     label:'🏛️ Turismo',     color:'var(--vacation)' },
+  ];
+  let html = '', gTotal = 0, gPaid = 0, gPend = 0;
+  TIPOS.forEach(t => {
+    const recs = DATA.reservations.filter(r => (r.tipo||'Alojamiento') === t.key);
+    if (!recs.length) return;
+    const total = recs.reduce((s,r)=>s+(r.precio||0),0);
+    const paid  = recs.filter(r=>r.payStatus==='paid').reduce((s,r)=>s+(r.precio||0),0);
+    const pend  = total - paid;
+    gTotal += total; gPaid += paid; gPend += pend;
+    html += `
+      <div class="summary-row" style="border-top:2px solid var(--border);margin-top:10px;padding-top:10px;">
+        <span style="font-weight:800;color:${t.color};">${t.label} <span style="color:var(--text-dim);font-weight:500;font-size:0.8rem;">(${recs.length})</span></span>
+        <span class="value" style="color:${t.color};">€${total.toFixed(0)}</span>
+      </div>
+      <div class="summary-row" style="padding-left:10px;border-bottom:none;padding-bottom:2px;"><span class="label" style="font-size:0.82rem;color:var(--vacation);">Pagado</span><span class="value" style="font-size:0.85rem;color:var(--vacation);">€${paid.toFixed(0)}</span></div>
+      <div class="summary-row" style="padding-left:10px;"><span class="label" style="font-size:0.82rem;color:var(--work);">Pendiente</span><span class="value" style="font-size:0.85rem;color:var(--work);">€${pend.toFixed(0)}</span></div>`;
+  });
+  html += `
+    <div class="summary-row" style="border-top:2px solid var(--accent);margin-top:12px;padding-top:12px;"><span class="label" style="color:var(--accent);font-weight:700;">TOTAL</span><span class="value" style="color:var(--accent);font-size:1.05rem;">€${gTotal.toFixed(0)}</span></div>
+    <div class="summary-row"><span class="label" style="color:var(--vacation);">Total pagado</span><span class="value" style="color:var(--vacation);">€${gPaid.toFixed(0)}</span></div>
+    <div class="summary-row"><span class="label" style="color:var(--work);">Falta por pagar</span><span class="value" style="color:var(--work);">€${gPend.toFixed(0)}</span></div>`;
+  el.innerHTML = html;
+}
+
+// Días de vacaciones.
+function renderVacacionesList(targetId) {
+  const el = document.getElementById(targetId);
   const vacDays = {};
   DATA.records.forEach(r => {
     if (r.vacaciones==='Si') {
-      if (!vacDays[r.fecha]) vacDays[r.fecha] = {dia:r.dia,ciudades:new Set()};
+      if (!vacDays[r.fecha]) vacDays[r.fecha] = { dia:r.dia, ciudades:new Set() };
       vacDays[r.fecha].ciudades.add(r.ciudad);
     }
   });
-  const vacEntries = Object.entries(vacDays);
-  vacEntries.forEach(([fecha,info]) => {
-    vacList.innerHTML += `<div class="vacation-day"><span class="date">${fecha}</span><span class="dayname" style="color:var(--text-dim);font-size:0.85rem;min-width:80px;">${info.dia}</span><span class="city">${[...info.ciudades].join(' · ')}</span></div>`;
-  });
-  vacList.innerHTML += `<p style="margin-top:10px;font-size:0.85rem;color:var(--vacation);font-weight:600;">Total: ${vacEntries.length} días de vacaciones</p>`;
-  // Work blocks
-  const workList = document.getElementById('workList');
-  workList.innerHTML = '';
+  const entries = Object.entries(vacDays).sort((a,b)=>fechaToISO(a[0]).localeCompare(fechaToISO(b[0])));
+  let html = entries.map(([fecha,info]) =>
+    `<div class="vacation-day"><span class="date">${fecha}</span><span class="dayname" style="color:var(--text-dim);font-size:0.85rem;min-width:80px;">${info.dia}</span><span class="city">${[...info.ciudades].join(' · ')}</span></div>`).join('');
+  if (!entries.length) { el.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;font-style:italic;">Sin días de vacaciones marcados.</p>'; return; }
+  html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--vacation);font-weight:600;">Total: ${entries.length} días de vacaciones</p>`;
+  el.innerHTML = html;
+}
+
+// Bloques de trabajo remoto.
+function renderTrabajoList(targetId) {
+  const el = document.getElementById(targetId);
   const workBlocks = DATA.records.filter(r=>classifyCategory(r.categoria)==='work');
-  const workByCity = {};
-  workBlocks.forEach(r=>{if(!workByCity[r.ciudad])workByCity[r.ciudad]=[];workByCity[r.ciudad].push(r);});
-  Object.entries(workByCity).forEach(([city,blocks])=>{
-    workList.innerHTML += `<div class="summary-row"><span class="label">${city}</span><span class="value">${blocks.length} bloque${blocks.length>1?'s':''}</span></div>`;
+  const byCity = {};
+  workBlocks.forEach(r => { if (!byCity[r.ciudad]) byCity[r.ciudad] = []; byCity[r.ciudad].push(r); });
+  let html = Object.entries(byCity).map(([city,blocks]) =>
+    `<div class="summary-row"><span class="label">${city}</span><span class="value">${blocks.length} bloque${blocks.length>1?'s':''}</span></div>`).join('');
+  if (!workBlocks.length) { el.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;font-style:italic;">Sin bloques de trabajo remoto.</p>'; return; }
+  html += `<p style="margin-top:10px;font-size:0.85rem;color:var(--work);font-weight:600;">Total: ${workBlocks.length} bloques de trabajo</p>`;
+  el.innerHTML = html;
+}
+
+// ── Finanzas · Dashboard Financiero (reservations dataset, valores en €) ──────
+let finFilters = { persona:'all', ciudad:'all', categoria:'all' };
+let finFiltersInit = false;
+let finCharts = {};
+
+function finReservationsFiltered() {
+  return DATA.reservations.filter(r => {
+    if (finFilters.ciudad    !== 'all' && r.ciudad !== finFilters.ciudad) return false;
+    if (finFilters.categoria !== 'all' && (r.tipo||'Alojamiento') !== finFilters.categoria) return false;
+    if (finFilters.persona   !== 'all' && (r.whoPaid||'') !== finFilters.persona) return false;
+    return true;
   });
-  workList.innerHTML += `<p style="margin-top:10px;font-size:0.85rem;color:var(--work);font-weight:600;">Total: ${workBlocks.length} bloques de trabajo</p>`;
-  // Reservations & payments
-  const resList = document.getElementById('resSummaryList');
-  resList.innerHTML = '';
-  if (!DATA.reservations.length) {
-    resList.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;font-style:italic;">Sin reservas registradas aún.</p>';
-    return;
+}
+
+function renderFinDashboard() {
+  if (!finFiltersInit) {
+    finFiltersInit = true;
+    const cities = [...new Set(DATA.reservations.map(r=>r.ciudad).filter(Boolean))].sort();
+    const cats   = [...new Set(DATA.reservations.map(r=>r.tipo||'Alojamiento'))].sort();
+    const people = [...new Set(DATA.reservations.map(r=>r.whoPaid).filter(Boolean))].sort();
+    const fill = (id, vals) => {
+      const sel = document.getElementById(id);
+      vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+    };
+    fill('finCiudad', cities); fill('finCategoria', cats); fill('finPersona', people);
+    document.getElementById('finPersona').onchange   = e => { finFilters.persona   = e.target.value; renderFinDashboard(); };
+    document.getElementById('finCiudad').onchange    = e => { finFilters.ciudad    = e.target.value; renderFinDashboard(); };
+    document.getElementById('finCategoria').onchange = e => { finFilters.categoria = e.target.value; renderFinDashboard(); };
+    document.getElementById('finClear').onclick = () => {
+      finFilters = { persona:'all', ciudad:'all', categoria:'all' };
+      ['finPersona','finCiudad','finCategoria'].forEach(id => { document.getElementById(id).value = 'all'; });
+      renderFinDashboard();
+    };
   }
-  const TIPOS_RES = [
-    { key:'Alojamiento', label:'🏨 Alojamiento', color:'var(--tourism)'   },
-    { key:'Transporte',  label:'🚆 Transporte',  color:'var(--transport)' },
-    { key:'Turismo',     label:'🏛️ Turismo',     color:'var(--vacation)'  },
+
+  const recs  = finReservationsFiltered();
+  const total = recs.reduce((s,r)=>s+(r.precio||0),0);
+  const paid  = recs.filter(r=>r.payStatus==='paid').reduce((s,r)=>s+(r.precio||0),0);
+  const pend  = total - paid;
+  const confirmed = recs.filter(r=>r.payStatus==='paid').length;
+  const pendingCount = recs.length - confirmed;
+
+  const kpis = [
+    { label:'Gasto total',          value:'€'+total.toFixed(0), color:'var(--accent)' },
+    { label:'Gasto pagado',         value:'€'+paid.toFixed(0),  color:'var(--vacation)' },
+    { label:'Gasto pendiente',      value:'€'+pend.toFixed(0),  color:'var(--work)' },
+    { label:'Reservas confirmadas', value:confirmed,            color:'var(--vacation)' },
+    { label:'Reservas pendientes',  value:pendingCount,         color:'var(--work)' },
   ];
-  const PAY_GROUPS = [
-    { key:'topay',  label:'📅 Por pagar', color:'var(--work)'     },
-    { key:'unpaid', label:'❌ Sin pagar', color:'#ef4444'          },
-    { key:'paid',   label:'✅ Pagado',    color:'var(--vacation)'  },
-    { key:'other',  label:'— Sin estado', color:'var(--text-dim)' },
-  ];
-  let totalPending = 0, totalPaid = 0;
-  DATA.reservations.forEach(r => {
-    if (r.payStatus === 'paid') totalPaid    += (r.precio||0);
-    else                         totalPending += (r.precio||0);
+  document.getElementById('finKpis').innerHTML = kpis.map(k => `
+    <div class="kpi-card" style="--accent-bar:${k.color};">
+      <span class="kpi-label">${k.label}</span>
+      <span class="kpi-value" style="color:${k.color};">${k.value}</span>
+    </div>`).join('');
+
+  finCharts.city = finBarChart('finCityCanvas','finCityMsg', finCharts.city, aggregateBy(recs, r=>r.ciudad||'—'),            '#5db8ff');
+  finCharts.cat  = finBarChart('finCatCanvas','finCatMsg',   finCharts.cat,  aggregateBy(recs, r=>r.tipo||'Alojamiento'),    '#b388ff');
+  finCharts.pers = finBarChart('finPersCanvas','finPersMsg', finCharts.pers, aggregateBy(recs, r=>r.whoPaid||'Sin asignar'), '#ff7849');
+  finCharts.paid = finDoughnut('finPaidCanvas','finPaidMsg', finCharts.paid, paid, pend);
+}
+
+function aggregateBy(recs, keyFn) {
+  const m = {};
+  recs.forEach(r => { const k = keyFn(r); m[k] = (m[k]||0) + (r.precio||0); });
+  return Object.entries(m).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
+}
+
+function finBarChart(canvasId, msgId, prev, entries, color) {
+  const canvas = document.getElementById(canvasId), msg = document.getElementById(msgId);
+  if (prev) { prev.destroy(); prev = null; }
+  if (!entries.length) { canvas.style.display='none'; msg.style.display=''; msg.textContent='Sin datos para este filtro.'; return null; }
+  canvas.style.display=''; msg.style.display='none';
+  const tc = chartTheme();
+  return new Chart(canvas, {
+    type:'bar',
+    data:{ labels:entries.map(e=>e[0]), datasets:[{ data:entries.map(e=>Math.round(e[1])), backgroundColor:color+'aa', borderColor:color, borderWidth:1, borderRadius:3 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:ctx=>` €${ctx.raw.toLocaleString('es-CO')}` } } },
+      scales:{ x:{ ticks:{ color:tc.dim, callback:v=>'€'+Math.round(v) }, grid:{ color:tc.grid } },
+               y:{ ticks:{ color:tc.text, font:{size:11} }, grid:{ color:tc.grid } } }
+    }
   });
-  TIPOS_RES.forEach(({ key:tipoKey, label:tipoLabel, color:tipoColor }) => {
-    const tipoRecs = DATA.reservations.filter(r => (r.tipo || 'Alojamiento') === tipoKey);
-    if (!tipoRecs.length) return;
-    const tipoTotal = tipoRecs.reduce((s,r) => s+(r.precio||0), 0);
-    resList.innerHTML += `
-      <div class="summary-row" style="margin-top:14px;padding-top:10px;border-top:2px solid var(--border);">
-        <span style="font-weight:800;font-size:1rem;color:${tipoColor};">${tipoLabel}</span>
-        <span class="value" style="color:${tipoColor};">€${tipoTotal.toFixed(0)}</span>
-      </div>`;
-    const grp = {topay:[],unpaid:[],paid:[],other:[]};
-    tipoRecs.forEach(r => (grp[r.payStatus] || grp.other).push(r));
-    PAY_GROUPS.forEach(({ key:pKey, label:pLabel, color:pColor }) => {
-      if (!grp[pKey].length) return;
-      const secTotal = grp[pKey].reduce((s,r)=>s+(r.precio||0),0);
-      resList.innerHTML += `<div class="summary-row" style="padding-left:8px;"><span class="label" style="color:${pColor};font-weight:600;">${pLabel} (${grp[pKey].length})</span><span class="value" style="color:${pColor};">€${secTotal.toFixed(0)}</span></div>`;
-      grp[pKey].forEach(r => {
-        const perPerson = r.precio > 0 && r.personas > 1 ? `€${(r.precio/r.personas).toFixed(0)}/pers` : '';
-        const meta = [
-          r.personas > 1   ? `👥 ${r.personas}` : '',
-          r.whoPaid        ? `pagó ${r.whoPaid}` : '',
-          r.installments>1 ? `${r.installments} cuotas` : '',
-          r.payDue         ? `vence ${r.payDue}` : '',
-        ].filter(Boolean).join(' · ');
-        resList.innerHTML += `
-          <div class="summary-row" style="padding-left:20px;border-bottom:none;padding-bottom:4px;align-items:flex-start;">
-            <span class="label" style="font-size:0.82rem;">
-              ${r.nombre} · ${r.ciudad}
-              ${meta?`<span style="display:block;font-size:0.75rem;color:var(--text-dim);margin-top:1px;">${meta}</span>`:''}
-            </span>
-            <span class="value" style="font-size:0.82rem;text-align:right;">
-              ${r.precio>0?`€${Number(r.precio).toFixed(0)}`:'—'}
-              ${perPerson?`<span style="display:block;font-size:0.72rem;color:var(--text-dim);">${perPerson}</span>`:''}
-            </span>
-          </div>`;
-      });
-    });
+}
+
+function finDoughnut(canvasId, msgId, prev, paid, pend) {
+  const canvas = document.getElementById(canvasId), msg = document.getElementById(msgId);
+  if (prev) { prev.destroy(); prev = null; }
+  if (paid + pend <= 0) { canvas.style.display='none'; msg.style.display=''; msg.textContent='Sin datos para este filtro.'; return null; }
+  canvas.style.display=''; msg.style.display='none';
+  const tc = chartTheme();
+  return new Chart(canvas, {
+    type:'doughnut',
+    data:{ labels:['Pagado','Pendiente'], datasets:[{ data:[Math.round(paid),Math.round(pend)], backgroundColor:['#46c47c','#ff7849'], borderColor:cssVar('--surface'), borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ color:tc.text } },
+                tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: €${ctx.raw.toLocaleString('es-CO')}` } } }
+    }
   });
-  resList.innerHTML += `
-    <div class="summary-row" style="margin-top:14px;padding-top:12px;border-top:2px solid var(--work);">
-      <span class="label" style="color:var(--work);font-weight:700;">FALTA POR PAGAR</span>
-      <span class="value" style="color:var(--work);font-size:1.1rem;">€${totalPending.toFixed(0)}</span>
-    </div>
-    <div class="summary-row">
-      <span class="label" style="color:var(--vacation);">Total pagado</span>
-      <span class="value" style="color:var(--vacation);">€${totalPaid.toFixed(0)}</span>
-    </div>`;
-  // Daily budget
-  const dailyBudgetList = document.getElementById('dailyBudgetList');
-  dailyBudgetList.innerHTML = '';
-  const byDay = {};
-  DATA.records.forEach(r => {
-    if (!r.fecha) return;
-    if (!byDay[r.fecha]) byDay[r.fecha] = { dia:r.dia, cities:new Set(), total:0 };
-    byDay[r.fecha].cities.add(r.ciudad);
-    byDay[r.fecha].total += parseFloat(r.presupuesto) || 0;
-  });
-  const sortedDays = Object.entries(byDay)
-    .filter(([,info]) => info.total > 0)
-    .sort((a,b) => fechaToISO(a[0]).localeCompare(fechaToISO(b[0])));
-  if (!sortedDays.length) {
-    dailyBudgetList.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;font-style:italic;">Sin presupuesto detallado registrado.</p>';
-  } else {
-    let grandTotal = 0;
-    sortedDays.forEach(([fecha,info]) => {
-      grandTotal += info.total;
-      const cities = [...info.cities].join(' · ');
-      dailyBudgetList.innerHTML += `
-        <div class="summary-row">
-          <span class="label">
-            ${fecha}
-            <span style="font-size:0.8rem;color:var(--text-dim);margin-left:6px;">${info.dia||''} · ${cities}</span>
-          </span>
-          <span class="value">€${info.total.toFixed(0)}</span>
-        </div>`;
-    });
-    dailyBudgetList.innerHTML += `
-      <div class="summary-row" style="border-top:2px solid var(--accent);margin-top:8px;padding-top:12px;">
-        <span class="label" style="color:var(--accent);font-weight:700;">TOTAL ESTIMADO</span>
-        <span class="value" style="color:var(--accent);font-size:1.1rem;">€${grandTotal.toFixed(0)}</span>
-      </div>`;
+}
+
+// Re-render the charts in the current view so they pick up new theme colors.
+function refreshThemedCharts() {
+  if (currentView === 'dashboard') { if (pagosLoaded) renderDashMonthlyChart(); }
+  else if (currentView === 'finanzas') {
+    if (finSubView === 'findash') renderFinDashboard();
+    else if (finSubView === 'pagos' && pagosData.compras.length) { renderPagosBar(); renderPagosMonthlyBar(); }
   }
 }
 
@@ -2523,6 +2797,7 @@ async function loadAndRenderPagos() {
       dbLoadCompras(), dbLoadPagos(), dbLoadPersonas(), dbLoadParticipantes()
     ]);
     pagosData = { compras, pagos, personas, participantes };
+    pagosLoaded = true;
 
     const empty = !compras.length && !personas.length && !pagos.length;
     if (empty) {
@@ -2859,6 +3134,10 @@ function renderPagosCalendar() {
   container.appendChild(legend);
 }
 
+// Read current theme colors so charts adapt to dark/light mode.
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function chartTheme() { return { text: cssVar('--text'), dim: cssVar('--text-dim'), grid: cssVar('--border') }; }
+
 function renderPagosBar() {
   const canvas = document.getElementById('pagosBarCanvas');
   const msg    = document.getElementById('pagosBarMsg');
@@ -2875,6 +3154,7 @@ function renderPagosBar() {
   const labels  = viewData.map(c => c.descripcion.length > 28 ? c.descripcion.slice(0, 26) + '…' : c.descripcion);
   const pagado  = viewData.map(c => +c._efectivoPagado.toFixed(2));
   const pending = viewData.map(c => +c._efectivoPendiente.toFixed(2));
+  const tc = chartTheme();
 
   pagosBarChart = new Chart(canvas, {
     type: 'bar',
@@ -2890,21 +3170,31 @@ function renderPagosBar() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#e8ecf1', font: { size: 12 } } },
+        legend: { labels: { color: tc.text, font: { size: 12 } } },
         tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${Math.round(ctx.raw).toLocaleString('es-CO')}` } }
       },
       scales: {
-        x: { stacked: true, ticks: { color: '#9aa4b2', callback: v => `$${Math.round(v).toLocaleString('es-CO')}` }, grid: { color: '#2d3441' } },
-        y: { stacked: true, ticks: { color: '#e8ecf1', font: { size: 11 } }, grid: { color: '#2d3441' } }
+        x: { stacked: true, ticks: { color: tc.dim, callback: v => `$${Math.round(v).toLocaleString('es-CO')}` }, grid: { color: tc.grid } },
+        y: { stacked: true, ticks: { color: tc.text, font: { size: 11 } }, grid: { color: tc.grid } }
       }
     }
   });
 }
 
 function renderPagosMonthlyBar() {
-  const canvas = document.getElementById('pagosMonthCanvas');
-  const msg    = document.getElementById('pagosMonthMsg');
-  if (pagosMonthChart) { pagosMonthChart.destroy(); pagosMonthChart = null; }
+  pagosMonthChart = buildMonthlyChart('pagosMonthCanvas', 'pagosMonthMsg', pagosMonthChart);
+}
+let dashMonthChart = null;
+function renderDashMonthlyChart() {
+  dashMonthChart = buildMonthlyChart('dashMonthCanvas', 'dashMonthMsg', dashMonthChart);
+}
+
+// Shared "Pagos por mes" stacked bar chart (used in Pagos view + Home dashboard).
+function buildMonthlyChart(canvasId, msgId, prevChart) {
+  const canvas = document.getElementById(canvasId);
+  const msg    = document.getElementById(msgId);
+  if (!canvas) return prevChart;
+  if (prevChart) { prevChart.destroy(); prevChart = null; }
 
   const { pagos } = pagosData;
   const viewData  = getPagosViewData();
@@ -2949,7 +3239,8 @@ function renderPagosMonthlyBar() {
     })
   );
 
-  pagosMonthChart = new Chart(canvas, {
+  const tc = chartTheme();
+  return new Chart(canvas, {
     type: 'bar',
     data: {
       labels: sorted.map(([,v]) => v.lbl),
@@ -2962,7 +3253,7 @@ function renderPagosMonthlyBar() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#e8ecf1', font: { size: 12 } } },
+        legend: { labels: { color: tc.text, font: { size: 12 } } },
         tooltip: {
           callbacks: {
             label:  ctx  => ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString('es-CO')}`,
@@ -2973,12 +3264,12 @@ function renderPagosMonthlyBar() {
             }
           },
           footerFont:  { size: 11 },
-          footerColor: '#9aa4b2',
+          footerColor: tc.dim,
         }
       },
       scales: {
-        x: { stacked: true, ticks: { color: '#9aa4b2' },                                                    grid: { color: '#2d3441' } },
-        y: { stacked: true, ticks: { color: '#9aa4b2', callback: v => `$${Math.round(v).toLocaleString('es-CO')}` }, grid: { color: '#2d3441' } }
+        x: { stacked: true, ticks: { color: tc.dim },                                                    grid: { color: tc.grid } },
+        y: { stacked: true, ticks: { color: tc.dim, callback: v => `$${Math.round(v).toLocaleString('es-CO')}` }, grid: { color: tc.grid } }
       }
     }
   });
@@ -3042,15 +3333,18 @@ function renderPagosCompraList() {
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-function updateMobileNav(view) {
-  const labels = {
-    home:'🏙️ Ciudades', timeline:'📅 Cronología', summary:'✨ Resumen',
-    reservations:'🎫 Reservas', pagos:'💳 Pagos', 'city-detail':'🏙️ Ciudades'
-  };
-  const el = document.getElementById('mobileCurrentTab');
-  if (el) el.textContent = labels[view] || '';
-  document.querySelectorAll('.mobile-nav-item').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.view === view || (view === 'city-detail' && btn.dataset.view === 'home'));
+// Top-level section each internal view belongs to (drives drawer highlight).
+const NAV_FOR_VIEW = {
+  dashboard: 'dashboard',
+  home: 'itinerario', timeline: 'itinerario', 'city-detail': 'itinerario',
+  finanzas: 'finanzas'
+};
+let finSubView = 'findash';
+
+function updateDrawerActive(view) {
+  const nav = NAV_FOR_VIEW[view] || 'dashboard';
+  document.querySelectorAll('.drawer-item[data-nav]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.nav === nav);
   });
 }
 
@@ -3059,30 +3353,55 @@ function switchView(view) {
     if (cityDetailMap) { cityDetailMap.remove(); cityDetailMap = null; }
   }
   currentView = view;
-  const isCityDetail = view === 'city-detail';
-  document.querySelectorAll('.tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.view === view || (isCityDetail && t.dataset.view === 'home'));
-  });
-  ['home','timeline','summary','reservations','pagos','city-detail'].forEach(v => {
+  ['dashboard','home','timeline','finanzas','city-detail'].forEach(v => {
     document.getElementById(`view-${v}`).classList.toggle('hidden', v !== view);
   });
-  if (view === 'home') {
+  if (view === 'dashboard') {
+    renderDashboard();
+  } else if (view === 'home') {
     currentCity = null;
     document.getElementById('filterCity').value = '';
     document.getElementById('backBtn').classList.add('hidden');
+    renderHome();
     setTimeout(() => { if (map) map.invalidateSize(); }, 100);
   } else if (view === 'timeline') {
     if (!currentCity) document.getElementById('backBtn').classList.add('hidden');
     if (calendarMode) renderCalendar(); else renderTimeline();
-  } else if (view === 'summary') {
-    renderSummary();
-  } else if (view === 'reservations') {
-    renderReservations();
-  } else if (view === 'pagos') {
-    loadAndRenderPagos();
+  } else if (view === 'finanzas') {
+    switchFinSub(finSubView);
   }
-  updateMobileNav(view);
+  updateDrawerActive(view);
   // city-detail: content rendered before this call in openCity
+}
+
+// Finanzas sub-tab switching (Dashboard Financiero · Reservas · Pagos)
+function switchFinSub(sub) {
+  finSubView = sub;
+  document.querySelectorAll('#finanzasSubtabs .subtab').forEach(b =>
+    b.classList.toggle('active', b.dataset.sub === sub));
+  document.getElementById('fin-findash').classList.toggle('hidden', sub !== 'findash');
+  document.getElementById('fin-reservations').classList.toggle('hidden', sub !== 'reservations');
+  document.getElementById('fin-pagos').classList.toggle('hidden', sub !== 'pagos');
+  if (sub === 'findash') renderFinDashboard();
+  else if (sub === 'reservations') renderReservations();
+  else if (sub === 'pagos') loadAndRenderPagos();
+}
+
+// Drawer open/close + top-level navigation
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerBackdrop').classList.remove('hidden');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerBackdrop').classList.add('hidden');
+}
+function navigate(nav) {
+  currentCity = null;
+  if (nav === 'itinerario') switchView('home');
+  else if (nav === 'finanzas') switchView('finanzas');
+  else switchView('dashboard');
+  closeDrawer();
 }
 
 // ── Filter init ───────────────────────────────────────────────────────────────
@@ -3126,44 +3445,51 @@ function initFilters() {
   };
 }
 
-// ── Event listeners ───────────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(t => {
-  t.onclick = () => {
-    if (t.dataset.view === 'timeline' || t.dataset.view === 'home') { currentCity = null; }
-    switchView(t.dataset.view);
-  };
+// ── Event listeners: drawer navigation ────────────────────────────────────────
+document.getElementById('menuBtn').onclick = openDrawer;
+document.getElementById('drawerClose').onclick = closeDrawer;
+document.getElementById('drawerBackdrop').onclick = closeDrawer;
+document.querySelectorAll('.drawer-item[data-nav]').forEach(btn => {
+  btn.onclick = () => navigate(btn.dataset.nav);
 });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+// Itinerario ⇄ Cronología (editing mode)
+document.getElementById('editItineraryBtn').onclick = () => switchView('timeline');
+document.getElementById('cronoBackBtn').onclick = () => { currentCity = null; switchView('home'); };
 document.getElementById('backBtn').onclick = () => { currentCity = null; switchView('home'); };
 document.getElementById('cityDetailBackBtn').onclick = () => { currentCity = null; switchView('home'); };
 
-// ── Hamburger menu ────────────────────────────────────────────────────────────
-document.getElementById('hamburgerBtn').addEventListener('click', e => {
-  e.stopPropagation();
-  const menu = document.getElementById('mobileNavMenu');
-  const btn  = document.getElementById('hamburgerBtn');
-  const open = !menu.classList.contains('hidden');
-  menu.classList.toggle('hidden', open);
-  btn.classList.toggle('open', !open);
-  btn.textContent = open ? '☰' : '✕';
+// Finanzas sub-tabs
+document.querySelectorAll('#finanzasSubtabs .subtab').forEach(b => {
+  b.onclick = () => switchFinSub(b.dataset.sub);
 });
-document.querySelectorAll('.mobile-nav-item').forEach(btn => {
-  btn.onclick = () => {
-    if (btn.dataset.view === 'timeline' || btn.dataset.view === 'home') currentCity = null;
-    switchView(btn.dataset.view);
-    document.getElementById('mobileNavMenu').classList.add('hidden');
-    document.getElementById('hamburgerBtn').classList.remove('open');
-    document.getElementById('hamburgerBtn').textContent = '☰';
-  };
+
+// ── Theme toggle (default = system preference) ────────────────────────────────
+function effectiveTheme() {
+  const forced = document.documentElement.getAttribute('data-theme');
+  if (forced) return forced;
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+function updateThemeLabel() {
+  const stored = localStorage.getItem('europa_theme');
+  const lbl = document.getElementById('themeLabel');
+  if (lbl) lbl.textContent = stored ? (stored === 'light' ? 'Claro' : 'Oscuro') : 'Sistema';
+}
+function toggleTheme() {
+  const next = effectiveTheme() === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('europa_theme', next); } catch (e) {}
+  updateThemeLabel();
+  refreshThemedCharts();
+}
+document.getElementById('themeBtn').onclick = toggleTheme;
+document.getElementById('drawerThemeToggle').onclick = toggleTheme;
+// React to OS theme changes while in system (no manual override) mode
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+  if (!document.documentElement.getAttribute('data-theme')) { updateThemeLabel(); refreshThemedCharts(); }
 });
-document.addEventListener('click', e => {
-  const menu   = document.getElementById('mobileNavMenu');
-  const header = document.getElementById('mobileHeader');
-  if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !header.contains(e.target)) {
-    menu.classList.add('hidden');
-    document.getElementById('hamburgerBtn').classList.remove('open');
-    document.getElementById('hamburgerBtn').textContent = '☰';
-  }
-});
+updateThemeLabel();
 document.getElementById('calToggle').onclick = () => {
   calendarMode = !calendarMode;
   document.getElementById('calToggle').classList.toggle('active', calendarMode);
@@ -3187,7 +3513,7 @@ async function toggleVacationDay(fecha) {
   }
   rerender();
   renderCityGrid();
-  if (currentView === 'summary') renderSummary();
+  if (currentView === 'dashboard') renderDashboard();
 }
 
 // ── Activity modal ────────────────────────────────────────────────────────────
@@ -3262,7 +3588,7 @@ async function saveModal() {
     discoverCities();
     closeModal();
     rerender(); renderCityGrid();
-    if (currentView === 'summary') renderSummary();
+    if (currentView === 'dashboard') renderDashboard();
   } catch(err) { alert('Error al guardar: ' + err.message); }
 }
 document.getElementById('modalClose').onclick  = closeModal;
@@ -3281,7 +3607,7 @@ document.getElementById('btnDelete').onclick   = async () => {
   closeModal();
   rerender();
   renderCityGrid();
-  if (currentView === 'summary') renderSummary();
+  if (currentView === 'dashboard') renderDashboard();
 };
 document.getElementById('modalOverlay').onclick = e => {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
@@ -3625,7 +3951,7 @@ async function showPaymentNotifications() {
 (async function init() {
   await loadData();
   initFilters();
-  renderHome();
+  switchView('dashboard');
 })();
 
 </script>
