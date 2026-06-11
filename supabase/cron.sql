@@ -18,7 +18,7 @@ select cron.schedule(
     url     := 'https://xkgwzbqwmczvgspbasis.supabase.co/functions/v1/send-payment-reminders',
     headers := jsonb_build_object(
                  'Content-Type',  'application/json',
-                 'Authorization', 'Bearer YOUR_CRON_SECRET'
+                 'Authorization', 'sdjkLHEFIP075ksiweg78'
                )
   );
   $$
