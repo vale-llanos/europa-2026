@@ -1190,6 +1190,7 @@
       <div class="sub">25 julio (Bogotá) → 20 agosto (Madrid)</div>
     </div>
     <button class="icon-button" id="themeBtn" aria-label="Cambiar tema" title="Cambiar tema claro/oscuro">🌗</button>
+    <button class="icon-button" id="authStatusBtn" aria-label="Estado de autenticación" title="Haz clic para autenticarte">🔓</button>
   </div>
 </header>
 
@@ -1204,6 +1205,13 @@
   <button class="drawer-item" data-nav="itinerario"><span class="di-icon">🗺️</span> Itinerario</button>
   <button class="drawer-item" data-nav="finanzas"><span class="di-icon">💶</span> Finanzas</button>
   <div class="drawer-foot">
+    <div style="padding:10px 14px;font-size:0.8rem;color:var(--text-dim);margin-bottom:8px;">
+      <div id="editModeStatus" style="font-weight:600;margin-bottom:4px;">👁️ View Mode</div>
+    </div>
+    <button class="drawer-item" id="authMenuBtn" style="margin-bottom:0;">
+      <span class="di-icon" id="authMenuIcon">🔓</span>
+      <span id="authMenuLabel">Iniciar sesión</span>
+    </button>
     <button class="drawer-item" id="drawerThemeToggle"><span class="di-icon">🌗</span> Tema:&nbsp;<span id="themeLabel" style="color:var(--text-dim);font-weight:600;"></span></button>
   </div>
 </nav>
@@ -1616,6 +1624,81 @@ const SUPABASE_URL = 'https://xkgwzbqwmczvgspbasis.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_V2PXQVCNi8oe09Yl4DiWlw_RaLmasVV';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ── Authentication State ──────────────────────────────────────────────────────
+let currentUser = null;
+let isAdmin = false;
+
+// Initialize auth
+async function initAuth() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (user) {
+    currentUser = user;
+    const { data: profile } = await sb.from('profiles').select('is_admin').eq('id', user.id).single();
+    isAdmin = profile?.is_admin ?? false;
+    updateAuthUI();
+  }
+}
+
+// Listen for auth changes
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    currentUser = session.user;
+    const { data: profile } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).single();
+    isAdmin = profile?.is_admin ?? false;
+  } else {
+    currentUser = null;
+    isAdmin = false;
+  }
+  updateAuthUI();
+});
+
+function updateAuthUI() {
+  const authBtn = document.getElementById('authStatusBtn');
+  const editMode = document.getElementById('editModeStatus');
+  
+  if (currentUser) {
+    authBtn.textContent = `🔒 ${currentUser.email || 'Admin'} ${isAdmin ? '👑' : ''}`;
+    authBtn.title = isAdmin ? '👑 Admin account' : '📖 Read-only account';
+    if (editMode) editMode.textContent = isAdmin ? '✏️ Edit Mode (Admin)' : '👁️ View Mode';
+  } else {
+    authBtn.textContent = '🔓 Sin autenticación';
+    authBtn.title = 'Click para iniciar sesión';
+    if (editMode) editMode.textContent = '👁️ View Mode (Public)';
+  }
+}
+
+// Auth modal functions
+async function showLoginModal() {
+  const email = prompt('Ingresa tu email:');
+  if (!email) return;
+  
+  const { error } = await sb.auth.signInWithOtp({ email });
+  if (error) {
+    alert('Error: ' + error.message);
+  } else {
+    alert('Revisa tu email para el link de acceso');
+  }
+}
+
+async function logout() {
+  const { error } = await sb.auth.signOut();
+  if (!error) {
+    currentUser = null;
+    isAdmin = false;
+    updateAuthUI();
+    alert('Sesión cerrada');
+  }
+}
+
+// Permission check for write operations
+function checkAdminPermission() {
+  if (!isAdmin) {
+    alert('⛔ Solo los administradores pueden editar.\n\nPor favor, inicia sesión con una cuenta de administrador.');
+    return false;
+  }
+  return true;
+}
+
 // ── Date helpers ──────────────────────────────────────────────────────────────
 const MONTH_ABR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_NUM = {
@@ -1656,16 +1739,19 @@ async function dbLoadActivities() {
   return data || [];
 }
 async function dbInsertActivity(record) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
   const { data, error } = await sb.from('actividades').insert([record]).select().single();
   if (error) throw error;
   return data;
 }
 async function dbUpdateActivity(id, record) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
   const { id: _id, ...payload } = record;
   const { error } = await sb.from('actividades').update(payload).eq('id', id);
   if (error) throw error;
 }
 async function dbDeleteActivity(id) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
   const { error } = await sb.from('actividades').delete().eq('id', id);
   if (error) throw error;
 }
@@ -1675,16 +1761,19 @@ async function dbLoadReservations() {
   return data || [];
 }
 async function dbInsertReservation(res) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
   const { data, error } = await sb.from('reservas').insert([res]).select().single();
   if (error) throw error;
   return data;
 }
 async function dbUpdateReservation(id, res) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
   const { id: _id, ...payload } = res;
   const { error } = await sb.from('reservas').update(payload).eq('id', id);
   if (error) throw error;
 }
 async function dbDeleteReservation(id) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
   const { error } = await sb.from('reservas').delete().eq('id', id);
   if (error) throw error;
 }
@@ -4000,6 +4089,7 @@ async function showPaymentNotifications() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 (async function init() {
+  await initAuth();
   await loadData();
   initFilters();
   switchView('dashboard');
@@ -4007,6 +4097,23 @@ async function showPaymentNotifications() {
   ensurePagosData().then(showPaymentNotifications);
   // Keep this device's push subscription registered/fresh.
   registerPushSubscription();
+  
+  // Auth event listeners
+  document.getElementById('authStatusBtn')?.addEventListener('click', () => {
+    if (currentUser) {
+      if (confirm(`¿Cerrar sesión de ${currentUser.email}?`)) logout();
+    } else {
+      showLoginModal();
+    }
+  });
+  
+  document.getElementById('authMenuBtn')?.addEventListener('click', () => {
+    if (currentUser) {
+      if (confirm(`¿Cerrar sesión de ${currentUser.email}?`)) logout();
+    } else {
+      showLoginModal();
+    }
+  });
 })();
 
 </script>
