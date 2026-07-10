@@ -1670,41 +1670,32 @@ let isAdmin = false;
 // Initialize auth
 async function initAuth() {
   const { data: { user } } = await sb.auth.getUser();
-  console.log('[AUTH] getUser:', user?.email, user?.id);
   if (user) {
     currentUser = user;
     try {
-      const { data: profile, error: profileError } = await sb.from('profiles').select('is_admin').eq('id', user.id).single();
-      console.log('[AUTH] profile lookup:', { profile, profileError, userId: user.id });
+      const { data: profile, error: profileError } = await sb.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
       isAdmin = profile?.is_admin ?? false;
     } catch (err) {
-      console.error('[AUTH] profile fetch error:', err);
       isAdmin = false;
     }
     updateAuthUI();
-  } else {
-    console.log('[AUTH] No user found');
   }
 }
 
 // Listen for auth changes
 sb.auth.onAuthStateChange(async (event, session) => {
-  console.log('[AUTH STATE CHANGE]', event, session?.user?.email);
   if (session?.user) {
     currentUser = session.user;
     try {
-      const { data: profile, error: profileError } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).single();
-      console.log('[AUTH STATE] profile lookup:', { profile, profileError });
+      const { data: profile, error: profileError } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).maybeSingle();
       isAdmin = profile?.is_admin ?? false;
     } catch (err) {
-      console.error('[AUTH STATE] profile fetch error:', err);
       isAdmin = false;
     }
   } else {
     currentUser = null;
     isAdmin = false;
   }
-  console.log('[AUTH STATE] Final state:', { currentUser: currentUser?.email, isAdmin });
   updateAuthUI();
 });
 
@@ -1744,13 +1735,13 @@ async function handleLogin(e) {
   const errorDiv = document.getElementById('loginError');
   
   if (!email || !password) {
-    errorDiv.textContent = '❌ Completa email y contraseña';
+    errorDiv.textContent = '❌ Email y contraseña requeridos';
     errorDiv.style.display = 'block';
     return;
   }
   
   if (password.length < 6) {
-    errorDiv.textContent = '❌ La contraseña debe tener mínimo 6 caracteres';
+    errorDiv.textContent = '❌ Contraseña mínimo 6 caracteres';
     errorDiv.style.display = 'block';
     return;
   }
@@ -1758,67 +1749,32 @@ async function handleLogin(e) {
   errorDiv.style.display = 'none';
   
   try {
-    console.log('[LOGIN] Attempting login for:', email);
-    let user = null;
-    let isNewUser = false;
+    // Just try signin
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     
-    // Try to sign up first (in case user doesn't exist)
-    const { data: signUpData, error: signUpError } = await sb.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: email } }
-    });
-    
-    console.log('[LOGIN] signUp result:', { error: signUpError?.message, userId: signUpData?.user?.id });
-    
-    // If sign up fails (user already exists), try to sign in
-    if (signUpError && signUpError.message.includes('already registered')) {
-      console.log('[LOGIN] User exists, trying signIn');
-      const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      console.log('[LOGIN] signIn result:', { error: signInError?.message, userId: signInData?.user?.id });
-      
-      if (signInError) {
-        errorDiv.textContent = '❌ ' + (signInError.message.includes('Invalid') ? 'Email o contraseña incorrectos' : signInError.message);
-        errorDiv.style.display = 'block';
-        return;
-      }
-      user = signInData.user;
-    } else if (signUpError) {
-      errorDiv.textContent = '❌ ' + signUpError.message;
+    if (error) {
+      errorDiv.textContent = '❌ ' + error.message;
       errorDiv.style.display = 'block';
       return;
-    } else {
-      console.log('[LOGIN] New user created');
-      user = signUpData.user;
-      isNewUser = true;
     }
     
-    // If new user, create profile entry
-    if (isNewUser && user) {
-      console.log('[LOGIN] Creating profile for new user:', user.id, user.email);
-      const { data: insertData, error: profileError } = await sb.from('profiles').insert({
-        id: user.id,
-        email: user.email,
-        full_name: email,
-        is_admin: false
-      }).select().single();
-      
-      console.log('[LOGIN] Profile creation result:', { insertData, profileError: profileError?.message });
+    // Update auth state immediately
+    currentUser = data.user;
+    isAdmin = false;
+    
+    // Fetch profile
+    try {
+      const { data: profile } = await sb.from('profiles').select('is_admin').eq('id', data.user.id).maybeSingle();
+      isAdmin = profile?.is_admin ?? false;
+    } catch (err) {
+      // Profile might not exist yet
+      isAdmin = false;
     }
     
-    // Wait a moment for auth state to update, then refresh auth state
-    console.log('[LOGIN] Waiting for auth state to update...');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await initAuth();
-    
+    updateAuthUI();
     closeLoginModal();
-    alert('✅ ¡Bienvenido! Te hemos iniciado sesión');
+    alert('✅ ¡Bienvenido!');
   } catch (err) {
-    console.error('[LOGIN] Error:', err);
     errorDiv.textContent = '❌ ' + err.message;
     errorDiv.style.display = 'block';
   }
