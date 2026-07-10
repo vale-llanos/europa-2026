@@ -3,20 +3,30 @@
 -- it only inserts a compra for a reserva that doesn't already have one, and
 -- only inserts pagos for a compra it just created.
 --
--- IMPORTANT: check the `data_type` result from phase1_audit.sql's query #0.
--- The `paid_by` column below is declared `bigint` — if personas.id is `uuid`
--- in your project, change `bigint` to `uuid` before running this.
+-- CURRENCY: compras.valor_total / pagos.valor_cuota are COP (the app's real
+-- source of truth — matches the existing Pagos tab). reservas.precio (being
+-- retired) was a EUR budget estimate. Since these orphan reservas never had a
+-- real COP payment recorded, we convert precio -> COP using the EUR/COP rate
+-- as of 2026-07-10 (1 EUR = 3774.09233271 COP, per
+-- https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.min.json).
+-- Edit eur_cop_rate below if you'd rather use a different rate.
 
 begin;
 
+-- Rate used to convert legacy EUR precio -> COP for this one-time backfill.
+create temporary table _fx (eur_cop_rate numeric) on commit drop;
+insert into _fx values (3774.09233271);
+
 -- 1) Proper FK replacement for reservas."whoPaid" (free text) — a purchase is
 --    normally fronted by one person, so this lives on compras.
+--    personas.id is uuid (reservas.id/compras.reserva_id are int8 — different
+--    id spaces, this column follows personas, not reservas).
 alter table public.compras
-  add column if not exists paid_by bigint references public.personas(id);
+  add column if not exists paid_by uuid references public.personas(id);
 
 -- 2) Create a compra for every reserva that has a legacy price but no compra yet.
 with orphans as (
-  select r.*
+  select r.*, r.precio * (select eur_cop_rate from _fx) as precio_cop
   from public.reservas r
   where coalesce(r.precio, 0) > 0
     and not exists (select 1 from public.compras c where c.reserva_id = r.id)
@@ -31,10 +41,10 @@ inserted_compras as (
   select
     o.id,
     o.nombre,
-    o.precio,
+    o.precio_cop,
     greatest(coalesce(o.installments, 1), 1),
     case when o."payStatus" = 'paid' then greatest(coalesce(o.installments, 1), 1) else 0 end,
-    case when o."payStatus" = 'paid' then 0 else o.precio end,
+    case when o."payStatus" = 'paid' then 0 else o.precio_cop end,
     o."payDue",
     mp.persona_id
   from orphans o

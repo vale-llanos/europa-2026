@@ -2,11 +2,9 @@
 -- Run this FIRST in the Supabase SQL Editor and review the results before
 -- running phase1_backfill.sql. Nothing here mutates data.
 
--- 0) Check the actual column types of the id/FK columns involved.
---    phase1_backfill.sql adds `compras.paid_by` as `bigint references personas(id)`,
---    assuming personas.id is bigint (matching the String()-coercion pattern the app
---    already uses for reserva_id/compra_id, which implies int8). If personas.id
---    shows as `uuid` below, edit phase1_backfill.sql to use `uuid` instead.
+-- 0) Column types of the id/FK columns involved (confirmed: reservas.id and
+--    compras.reserva_id are int8; personas.id/compras.id/pagos.id are uuid —
+--    phase1_backfill.sql's `compras.paid_by` column follows personas.id, so it's uuid).
 select table_name, column_name, data_type
 from information_schema.columns
 where table_schema = 'public'

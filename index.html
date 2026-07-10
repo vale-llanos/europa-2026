@@ -1342,7 +1342,7 @@
 
     <!-- Sub-tab: Dashboard Financiero -->
     <div id="fin-findash">
-      <p class="section-sub">Resumen de reservas (valores en €). Filtra por persona, ciudad o categoría.</p>
+      <p class="section-sub">Resumen de reservas (valores en COP, con equivalente en € entre paréntesis). Filtra por persona, ciudad o categoría.</p>
       <div class="filter-row">
         <div class="filter-group">
           <label for="finPersona">Persona</label>
@@ -1479,7 +1479,7 @@
         <input type="text" id="rConfirmacion" placeholder="ABC-123456">
       </div>
       <div class="form-group">
-        <label>Precio (€)</label>
+        <label>Precio total (COP)</label>
         <input type="number" id="rPrecio" placeholder="0" min="0" step="0.01">
       </div>
       <div class="form-group full">
@@ -1959,6 +1959,48 @@ function reservaFinancials(reservaId) {
   return { total, paid, pending, payStatus, installments, nextDue: dueDates[0] || null, paidByName, compras };
 }
 
+// ── Currency (COP is the stored source of truth — pagos/compras are always
+// COP; € figures shown around the app are a live-converted display only) ──────
+let EUR_COP_RATE = null;
+const EUR_RATE_URLS = [
+  'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.min.json',
+  'https://latest.currency-api.pages.dev/v1/currencies/eur.min.json'
+];
+async function ensureExchangeRate() {
+  if (EUR_COP_RATE) return EUR_COP_RATE;
+  const cachedRate = parseFloat(localStorage.getItem('europa_eur_cop_rate'));
+  const cachedAt   = Number(localStorage.getItem('europa_eur_cop_rate_at') || 0);
+  if (cachedRate && Date.now() - cachedAt < 24 * 60 * 60 * 1000) {
+    EUR_COP_RATE = cachedRate;
+    return EUR_COP_RATE;
+  }
+  for (const url of EUR_RATE_URLS) {
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      const rate = data?.eur?.cop;
+      if (rate) {
+        EUR_COP_RATE = rate;
+        localStorage.setItem('europa_eur_cop_rate', String(rate));
+        localStorage.setItem('europa_eur_cop_rate_at', String(Date.now()));
+        return EUR_COP_RATE;
+      }
+    } catch (e) { console.warn('Exchange rate fetch failed for', url, ':', e.message); }
+  }
+  if (cachedRate) { EUR_COP_RATE = cachedRate; return EUR_COP_RATE; } // stale cache beats nothing
+  return null;
+}
+// Formats a COP amount as "$123.456 COP · ≈ €33" (falls back to COP-only if
+// the rate hasn't loaded yet).
+function formatCop(cop, { withEur = true } = {}) {
+  const copStr = `$${Math.round(cop).toLocaleString('es-CO')}`;
+  if (!withEur || !EUR_COP_RATE || !cop) return copStr;
+  return `${copStr} <span style="color:var(--text-dim);font-weight:400;">· ≈ €${Math.round(cop / EUR_COP_RATE).toLocaleString('es-ES')}</span>`;
+}
+function copToEur(cop) {
+  return EUR_COP_RATE && cop ? cop / EUR_COP_RATE : null;
+}
+
 async function seedActividades() {
   const loadMsg = document.querySelector('#loadingOverlay p');
   if (loadMsg) loadMsg.textContent = 'Primera vez: guardando itinerario en la nube…';
@@ -2375,7 +2417,7 @@ function renderCityReservationsList(city, cityReservations) {
   }
   cityReservations.forEach(res => {
     const fin = reservaFinancials(res.id);
-    const perPerson = (fin.total > 0 && res.personas > 1) ? `€${(fin.total/res.personas).toFixed(0)}/pers` : '';
+    const perPerson = (fin.total > 0 && res.personas > 1) ? `$${Math.round(fin.total/res.personas).toLocaleString('es-CO')}/pers` : '';
     const ps = fin.payStatus;
     const payLabel = { paid:'✅ Pagado', partial:'🟡 Parcial', unpaid:'❌ Sin pagar', none:'' }[ps] || '';
     let payDetails = '';
@@ -2399,7 +2441,7 @@ function renderCityReservationsList(city, cityReservations) {
         </div>
       </div>
       <div class="city-res-item-price">
-        ${fin.total > 0 ? `<div>€${fin.total.toFixed(0)}</div>` : '<div>—</div>'}
+        ${fin.total > 0 ? `<div>${formatCop(fin.total)}</div>` : '<div>—</div>'}
         ${perPerson ? `<div style="font-size:0.75rem;font-weight:400;color:var(--text-dim);">${perPerson}</div>` : ''}
         ${res.personas > 1 ? `<div style="font-size:0.72rem;color:var(--text-dim);">👥 ${res.personas}</div>` : ''}
       </div>`;
@@ -2704,15 +2746,15 @@ function renderResumenReservas(targetId) {
     html += `
       <div class="summary-row" style="border-top:2px solid var(--border);margin-top:10px;padding-top:10px;">
         <span style="font-weight:800;color:${t.color};">${t.label} <span style="color:var(--text-dim);font-weight:500;font-size:0.8rem;">(${recs.length})</span></span>
-        <span class="value" style="color:${t.color};">€${total.toFixed(0)}</span>
+        <span class="value" style="color:${t.color};">${formatCop(total)}</span>
       </div>
-      <div class="summary-row" style="padding-left:10px;border-bottom:none;padding-bottom:2px;"><span class="label" style="font-size:0.82rem;color:var(--vacation);">Pagado</span><span class="value" style="font-size:0.85rem;color:var(--vacation);">€${paid.toFixed(0)}</span></div>
-      <div class="summary-row" style="padding-left:10px;"><span class="label" style="font-size:0.82rem;color:var(--work);">Pendiente</span><span class="value" style="font-size:0.85rem;color:var(--work);">€${pend.toFixed(0)}</span></div>`;
+      <div class="summary-row" style="padding-left:10px;border-bottom:none;padding-bottom:2px;"><span class="label" style="font-size:0.82rem;color:var(--vacation);">Pagado</span><span class="value" style="font-size:0.85rem;color:var(--vacation);">${formatCop(paid)}</span></div>
+      <div class="summary-row" style="padding-left:10px;"><span class="label" style="font-size:0.82rem;color:var(--work);">Pendiente</span><span class="value" style="font-size:0.85rem;color:var(--work);">${formatCop(pend)}</span></div>`;
   });
   html += `
-    <div class="summary-row" style="border-top:2px solid var(--accent);margin-top:12px;padding-top:12px;"><span class="label" style="color:var(--accent);font-weight:700;">TOTAL</span><span class="value" style="color:var(--accent);font-size:1.05rem;">€${gTotal.toFixed(0)}</span></div>
-    <div class="summary-row"><span class="label" style="color:var(--vacation);">Total pagado</span><span class="value" style="color:var(--vacation);">€${gPaid.toFixed(0)}</span></div>
-    <div class="summary-row"><span class="label" style="color:var(--work);">Falta por pagar</span><span class="value" style="color:var(--work);">€${gPend.toFixed(0)}</span></div>`;
+    <div class="summary-row" style="border-top:2px solid var(--accent);margin-top:12px;padding-top:12px;"><span class="label" style="color:var(--accent);font-weight:700;">TOTAL</span><span class="value" style="color:var(--accent);font-size:1.05rem;">${formatCop(gTotal)}</span></div>
+    <div class="summary-row"><span class="label" style="color:var(--vacation);">Total pagado</span><span class="value" style="color:var(--vacation);">${formatCop(gPaid)}</span></div>
+    <div class="summary-row"><span class="label" style="color:var(--work);">Falta por pagar</span><span class="value" style="color:var(--work);">${formatCop(gPend)}</span></div>`;
   el.innerHTML = html;
 }
 
@@ -2792,11 +2834,11 @@ async function renderFinDashboard() {
   const pendingCount = recs.length - confirmed;
 
   const kpis = [
-    { label:'Gasto total',          value:'€'+total.toFixed(0), color:'var(--accent)' },
-    { label:'Gasto pagado',         value:'€'+paid.toFixed(0),  color:'var(--vacation)' },
-    { label:'Gasto pendiente',      value:'€'+pend.toFixed(0),  color:'var(--work)' },
-    { label:'Reservas confirmadas', value:confirmed,            color:'var(--vacation)' },
-    { label:'Reservas pendientes',  value:pendingCount,         color:'var(--work)' },
+    { label:'Gasto total',          value:formatCop(total), color:'var(--accent)' },
+    { label:'Gasto pagado',         value:formatCop(paid),  color:'var(--vacation)' },
+    { label:'Gasto pendiente',      value:formatCop(pend),  color:'var(--work)' },
+    { label:'Reservas confirmadas', value:confirmed,        color:'var(--vacation)' },
+    { label:'Reservas pendientes',  value:pendingCount,     color:'var(--work)' },
   ];
   document.getElementById('finKpis').innerHTML = kpis.map(k => `
     <div class="kpi-card" style="--accent-bar:${k.color};">
@@ -2827,8 +2869,8 @@ function finBarChart(canvasId, msgId, prev, entries, color) {
     type:'bar',
     data:{ labels:entries.map(e=>e[0]), datasets:[{ data:entries.map(e=>Math.round(e[1])), backgroundColor:color+'aa', borderColor:color, borderWidth:1, borderRadius:3 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:ctx=>` €${ctx.raw.toLocaleString('es-CO')}` } } },
-      scales:{ x:{ ticks:{ color:tc.dim, callback:v=>'€'+Math.round(v) }, grid:{ color:tc.grid } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:ctx=>` $${ctx.raw.toLocaleString('es-CO')}` } } },
+      scales:{ x:{ ticks:{ color:tc.dim, callback:v=>'$'+Math.round(v).toLocaleString('es-CO') }, grid:{ color:tc.grid } },
                y:{ ticks:{ color:tc.text, font:{size:11} }, grid:{ color:tc.grid } } }
     }
   });
@@ -2845,7 +2887,7 @@ function finDoughnut(canvasId, msgId, prev, paid, pend) {
     data:{ labels:['Pagado','Pendiente'], datasets:[{ data:[Math.round(paid),Math.round(pend)], backgroundColor:['#46c47c','#ff7849'], borderColor:cssVar('--surface'), borderWidth:2 }] },
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:'bottom', labels:{ color:tc.text } },
-                tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: €${ctx.raw.toLocaleString('es-CO')}` } } }
+                tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: $${ctx.raw.toLocaleString('es-CO')}` } } }
     }
   });
 }
@@ -2939,7 +2981,7 @@ async function renderReservations() {
           </div>`:''}
           <div class="res-card-row">
             ${res.personas?`👥 ${res.personas} persona${res.personas>1?'s':''}`:''}
-            ${fin.total>0?`&nbsp;·&nbsp;💰 <strong style="color:var(--accent)">€${fin.total.toFixed(0)}</strong>`:''}
+            ${fin.total>0?`&nbsp;·&nbsp;💰 <strong style="color:var(--accent)">${formatCop(fin.total)}</strong>`:''}
           </div>
           <div class="res-card-row" style="margin-top:6px;flex-wrap:wrap;gap:6px;">
             ${res.tipo?`<span class="tipo-badge ${res.tipo}">${res.tipo==='Alojamiento'?'🏨':res.tipo==='Transporte'?'🚆':'🏛️'} ${res.tipo}</span>`:''}
@@ -4048,7 +4090,7 @@ async function openResModal({reservation, index, ciudad}) {
     summaryEl.textContent = isNew ? '' : 'Sin costo registrado todavía.';
   } else {
     const statusLabel = { paid:'✅ Pagado', partial:'🟡 Pago parcial', unpaid:'❌ Sin pagar' }[fin.payStatus] || '';
-    summaryEl.textContent = `€${fin.total.toFixed(0)} total · €${fin.paid.toFixed(0)} pagado · ${statusLabel}` + (fin.nextDue ? ` · próxima cuota ${fin.nextDue}` : '');
+    summaryEl.innerHTML = `${formatCop(fin.total)} total · ${formatCop(fin.paid, {withEur:false})} pagado · ${statusLabel}` + (fin.nextDue ? ` · próxima cuota ${fin.nextDue}` : '');
   }
   const showLink = !isNew && fin && fin.compras.length >= 1;
   linkEl.classList.toggle('hidden', !showLink);
@@ -4377,6 +4419,12 @@ async function showPaymentNotifications() {
   switchView('dashboard');
   // Check payment reminders on every app open (not only when visiting Pagos).
   ensurePagosData().then(showPaymentNotifications);
+  // COP→EUR display rate — re-render whatever's currently showing € once it loads.
+  ensureExchangeRate().then(() => {
+    if (currentView === 'dashboard') renderResumenReservas('dashResumenReservas');
+    if (currentView === 'finanzas' && finSubView === 'findash') renderFinDashboard();
+    if (currentView === 'city-detail' && currentCity) renderCityReservationsList(currentCity, DATA.reservations.filter(r => r.ciudad === currentCity));
+  });
   // Keep this device's push subscription registered/fresh.
   registerPushSubscription();
   
