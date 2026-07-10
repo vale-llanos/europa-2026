@@ -113,6 +113,20 @@
     transition: all 0.15s;
   }
   .icon-button:hover { border-color: var(--accent); color: var(--accent); }
+  
+  /* === AUTH BUTTON === */
+  #authStatusBtn {
+    width: auto !important;
+    height: auto !important;
+    padding: 8px 14px !important;
+    font-size: 0.85rem !important;
+    font-weight: 600;
+    white-space: nowrap;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #authStatusBtn:hover { background: var(--accent); color: white; }
 
   /* === NAVIGATION DRAWER === */
   .drawer-backdrop {
@@ -1190,7 +1204,7 @@
       <div class="sub">25 julio (Bogotá) → 20 agosto (Madrid)</div>
     </div>
     <button class="icon-button" id="themeBtn" aria-label="Cambiar tema" title="Cambiar tema claro/oscuro">🌗</button>
-    <button class="icon-button" id="authStatusBtn" aria-label="Estado de autenticación" title="Haz clic para autenticarte">🔓</button>
+    <button id="authStatusBtn" aria-label="Estado de autenticación" title="Haz clic para autenticarte">🔓 Sin autenticar</button>
   </div>
 </header>
 
@@ -1614,6 +1628,31 @@
   </div>
 </div>
 
+<!-- LOGIN MODAL -->
+<div class="modal-overlay hidden" id="loginOverlay">
+  <div class="modal" style="max-width:400px;">
+    <h3>
+      <span>🔐 Iniciar Sesión</span>
+      <button class="modal-close" id="loginClose">✕</button>
+    </h3>
+    <form id="loginForm" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="form-group">
+        <label>📧 Email</label>
+        <input type="email" id="loginEmail" placeholder="tu@email.com" required />
+      </div>
+      <div class="form-group">
+        <label>🔑 Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="Mínimo 6 caracteres" required />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="loginCancel">Cancelar</button>
+        <button type="submit" class="btn-primary">Iniciar sesión</button>
+      </div>
+    </form>
+    <div id="loginError" style="color:#ef4444;font-size:0.85rem;margin-top:10px;display:none;"></div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
@@ -1657,26 +1696,81 @@ function updateAuthUI() {
   const editMode = document.getElementById('editModeStatus');
   
   if (currentUser) {
-    authBtn.textContent = `🔒 ${currentUser.email || 'Admin'} ${isAdmin ? '👑' : ''}`;
-    authBtn.title = isAdmin ? '👑 Admin account' : '📖 Read-only account';
+    authBtn.textContent = isAdmin ? `🔒 ${currentUser.email} 👑` : `🔒 ${currentUser.email}`;
+    authBtn.title = isAdmin ? '👑 Admin - Haz clic para cerrar sesión' : '📖 Usuario - Haz clic para cerrar sesión';
     if (editMode) editMode.textContent = isAdmin ? '✏️ Edit Mode (Admin)' : '👁️ View Mode';
   } else {
-    authBtn.textContent = '🔓 Sin autenticación';
-    authBtn.title = 'Click para iniciar sesión';
+    authBtn.textContent = '🔓 Sin autenticar';
+    authBtn.title = 'Haz clic para iniciar sesión con email y contraseña';
     if (editMode) editMode.textContent = '👁️ View Mode (Public)';
   }
 }
 
 // Auth modal functions
 async function showLoginModal() {
-  const email = prompt('Ingresa tu email:');
-  if (!email) return;
+  const overlay = document.getElementById('loginOverlay');
+  overlay.classList.remove('hidden');
+  document.getElementById('loginEmail').focus();
+}
+
+function closeLoginModal() {
+  const overlay = document.getElementById('loginOverlay');
+  overlay.classList.add('hidden');
+  document.getElementById('loginForm').reset();
+  document.getElementById('loginError').style.display = 'none';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errorDiv = document.getElementById('loginError');
   
-  const { error } = await sb.auth.signInWithOtp({ email });
-  if (error) {
-    alert('Error: ' + error.message);
-  } else {
-    alert('Revisa tu email para el link de acceso');
+  if (!email || !password) {
+    errorDiv.textContent = '❌ Completa email y contraseña';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  
+  if (password.length < 6) {
+    errorDiv.textContent = '❌ La contraseña debe tener mínimo 6 caracteres';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  
+  errorDiv.style.display = 'none';
+  
+  try {
+    // Try to sign up first (in case user doesn't exist)
+    const { data: signUpData, error: signUpError } = await sb.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: email } }
+    });
+    
+    // If sign up fails (user already exists), try to sign in
+    if (signUpError && signUpError.message.includes('already registered')) {
+      const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInError) {
+        errorDiv.textContent = '❌ ' + (signInError.message.includes('Invalid') ? 'Email o contraseña incorrectos' : signInError.message);
+        errorDiv.style.display = 'block';
+        return;
+      }
+    } else if (signUpError) {
+      errorDiv.textContent = '❌ ' + signUpError.message;
+      errorDiv.style.display = 'block';
+      return;
+    }
+    
+    closeLoginModal();
+    alert('✅ ¡Bienvenido! Te hemos iniciado sesión');
+  } catch (err) {
+    errorDiv.textContent = '❌ ' + err.message;
+    errorDiv.style.display = 'block';
   }
 }
 
@@ -4112,6 +4206,19 @@ async function showPaymentNotifications() {
       if (confirm(`¿Cerrar sesión de ${currentUser.email}?`)) logout();
     } else {
       showLoginModal();
+    }
+  });
+  
+  // Login modal event listeners
+  document.getElementById('loginClose')?.addEventListener('click', closeLoginModal);
+  document.getElementById('loginCancel')?.addEventListener('click', closeLoginModal);
+  document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+  document.getElementById('loginOverlay')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('loginOverlay')) closeLoginModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('loginOverlay').classList.contains('hidden')) {
+      closeLoginModal();
     }
   });
 })();

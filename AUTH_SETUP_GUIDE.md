@@ -32,10 +32,13 @@ Tu sitio ahora está protegido. Solo los administradores pueden editar contenido
 Una vez que ejecutes el SQL:
 
 1. **Abre tu sitio** en el navegador
-2. **Haz clic en el botón** 🔓 (arriba a la derecha del header)
-3. **Ingresa tu email** (ej: `tu-email@gmail.com`)
-4. **Revisa tu email** y haz clic en el link de acceso
-5. **Ya estás en sesión**, pero aún no eres admin
+2. **Haz clic en el botón** � "Sin autenticar" (arriba a la derecha)
+3. **En el primer prompt**:
+   - Ingresa tu email (ej: `tu-email@gmail.com`)
+4. **En el segundo prompt**:
+   - Ingresa una contraseña (mínimo 6 caracteres, ejemplo: `Admin123`)
+5. **Listo!** Ya estás registrado y con sesión iniciada
+6. Pero aún no eres admin...
 
 Ahora tienes que marcar tu cuenta como admin:
 
