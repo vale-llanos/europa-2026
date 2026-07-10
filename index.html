@@ -823,6 +823,7 @@
   }
   .pay-badge.paid    { background: #46c47c20; color: var(--vacation); }
   .pay-badge.topay   { background: #f7c94820; color: var(--work); }
+  .pay-badge.partial { background: #f7c94820; color: var(--work); }
   .pay-badge.unpaid  { background: #ef444420; color: #ef4444; }
   .tipo-badge {
     display: inline-flex; align-items: center; gap: 3px;
@@ -1513,27 +1514,25 @@
           <option value="Turismo">🏛️ Turismo</option>
         </select>
       </div>
-      <div class="form-group full">
-        <label>Estado de pago</label>
-        <select id="rPayStatus">
-          <option value="">— Sin especificar —</option>
-          <option value="paid">✅ Pagado</option>
-          <option value="topay">📅 Por pagar</option>
-          <option value="unpaid">❌ Sin pagar</option>
-        </select>
-      </div>
-      <div id="rPayPaidFields" class="hidden form-grid" style="grid-column:1/-1;gap:14px;padding:0;">
-        <div class="form-group">
-          <label>¿Quién pagó?</label>
-          <input type="text" id="rWhoPaid" placeholder="Vale, mamá...">
-        </div>
-        <div class="form-group">
-          <label>N° de cuotas</label>
-          <input type="number" id="rInstallments" placeholder="1" min="1" step="1">
+      <div class="form-group full" id="rCostSection">
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Costo y pago</span>
+          <a href="#" id="rManagePagosLink" class="hidden" style="font-size:0.8rem;font-weight:600;color:var(--accent);">Gestionar pagos →</a>
+        </label>
+        <div id="rFinSummary" style="font-size:0.82rem;color:var(--text-dim);margin:2px 0 10px;"></div>
+        <div class="form-grid" style="grid-column:1/-1;gap:14px;padding:0;">
+          <div class="form-group">
+            <label>¿Quién pagó?</label>
+            <select id="rWhoPaid"><option value="">— Sin especificar —</option></select>
+          </div>
+          <div class="form-group">
+            <label>N° de cuotas</label>
+            <input type="number" id="rInstallments" placeholder="1" min="1" step="1" value="1">
+          </div>
         </div>
       </div>
       <div class="form-group full">
-        <label>Fecha límite de pago <span style="color:var(--text-dim);font-weight:400;">(opcional)</span></label>
+        <label>Fecha de la primera cuota <span style="color:var(--text-dim);font-weight:400;">(opcional)</span></label>
         <input type="date" id="rPayDue">
       </div>
     </div>
@@ -1915,6 +1914,51 @@ async function ensurePagosData() {
   return pagosLoaded;
 }
 
+// ── Financial helpers (single source of truth: compras/pagos only) ───────────
+// Reservas never carry their own price/payment fields — a reservation's money
+// status is always derived live from its linked compra(s) + pagos, never cached.
+function compraFinancials(compraId) {
+  const compra = pagosData.compras.find(c => c.id === compraId);
+  const pagos  = pagosData.pagos.filter(p => p.compra_id === compraId);
+  const total  = compra ? (Number(compra.valor_total) || 0) : 0;
+  const paid   = pagos.filter(p => p.pagado).reduce((s,p) => s + (Number(p.valor_cuota) || 0), 0);
+  const unpaid = pagos.filter(p => !p.pagado).sort((a,b) => String(a.fecha_pago||'').localeCompare(String(b.fecha_pago||'')));
+  return {
+    compra,
+    total,
+    paid,
+    pending: total - paid,
+    cuotasPagadas: pagos.length - unpaid.length,
+    cuotasTotales: compra ? (compra.cuotas_totales || pagos.length) : pagos.length,
+    nextDue: unpaid.length ? unpaid[0].fecha_pago : null,
+    allPaid: pagos.length > 0 && unpaid.length === 0,
+    pagos
+  };
+}
+
+function reservaFinancials(reservaId) {
+  const compras = pagosData.compras.filter(c => String(c.reserva_id) === String(reservaId));
+  if (!compras.length) {
+    return { total: 0, paid: 0, pending: 0, payStatus: 'none', installments: 0, nextDue: null, paidByName: '', compras: [] };
+  }
+  const parts = compras.map(c => compraFinancials(c.id));
+  const total = parts.reduce((s,f) => s + f.total, 0);
+  const paid  = parts.reduce((s,f) => s + f.paid, 0);
+  const pending = total - paid;
+  const installments = parts.reduce((s,f) => s + f.cuotasTotales, 0);
+  const dueDates = parts.map(f => f.nextDue).filter(Boolean).sort();
+  let payStatus;
+  if (total <= 0)        payStatus = 'none';
+  else if (paid <= 0)    payStatus = 'unpaid';
+  else if (pending <= 0.005) payStatus = 'paid';
+  else                   payStatus = 'partial';
+  const paidByIds = [...new Set(compras.map(c => c.paid_by).filter(v => v != null))];
+  const paidByName = paidByIds
+    .map(id => pagosData.personas.find(p => p.id === id)?.nombre)
+    .filter(Boolean).join(', ');
+  return { total, paid, pending, payStatus, installments, nextDue: dueDates[0] || null, paidByName, compras };
+}
+
 async function seedActividades() {
   const loadMsg = document.querySelector('#loadingOverlay p');
   if (loadMsg) loadMsg.textContent = 'Primera vez: guardando itinerario en la nube…';
@@ -2136,6 +2180,7 @@ function renderCityDetail(city) {
   renderCityMiniCalendar(city, cityRecords);
   renderCityBudget(city, cityRecords);
   renderCityReservationsList(city, cityReservations);
+  ensurePagosData().then(() => { if (currentCity === city) renderCityReservationsList(city, cityReservations); });
   setTimeout(() => initCityDetailMap(city, cityRecords), 80);
 }
 
@@ -2329,14 +2374,15 @@ function renderCityReservationsList(city, cityReservations) {
     return;
   }
   cityReservations.forEach(res => {
-    const perPerson = (res.precio > 0 && res.personas > 1) ? `€${(res.precio/res.personas).toFixed(0)}/pers` : '';
-    const ps = res.payStatus || 'unpaid';
-    const payLabel = { paid:'✅ Pagado', topay:'📅 Por pagar', unpaid:'❌ Sin pagar' }[ps] || '— Sin estado';
+    const fin = reservaFinancials(res.id);
+    const perPerson = (fin.total > 0 && res.personas > 1) ? `€${(fin.total/res.personas).toFixed(0)}/pers` : '';
+    const ps = fin.payStatus;
+    const payLabel = { paid:'✅ Pagado', partial:'🟡 Parcial', unpaid:'❌ Sin pagar', none:'' }[ps] || '';
     let payDetails = '';
     if (ps === 'paid') {
-      payDetails = [res.whoPaid ? `Pagó: ${res.whoPaid}` : '', res.installments > 1 ? `${res.installments} cuotas` : ''].filter(Boolean).join(' · ');
-    } else if ((ps === 'topay' || ps === 'unpaid') && res.payDue) {
-      payDetails = `Vence: ${res.payDue}`;
+      payDetails = [fin.paidByName ? `Pagó: ${fin.paidByName}` : '', fin.installments > 1 ? `${fin.installments} cuotas` : ''].filter(Boolean).join(' · ');
+    } else if ((ps === 'unpaid' || ps === 'partial') && fin.nextDue) {
+      payDetails = `Vence: ${fin.nextDue}`;
     }
     const item = document.createElement('div');
     item.className = 'city-res-item';
@@ -2348,12 +2394,12 @@ function renderCityReservationsList(city, cityReservations) {
         ${res.confirmacion ? `<div class="city-res-item-meta">🎟 ${res.confirmacion}</div>` : ''}
         <div class="city-res-item-meta" style="margin-top:6px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
           ${res.tipo ? `<span class="tipo-badge ${res.tipo}">${res.tipo==='Alojamiento'?'🏨':res.tipo==='Transporte'?'🚆':'🏛️'} ${res.tipo}</span>` : ''}
-          <span class="pay-badge ${ps}">${payLabel}</span>
+          ${ps !== 'none' ? `<span class="pay-badge ${ps}">${payLabel}</span>` : ''}
           ${payDetails ? `<span style="font-size:0.78rem;color:var(--text-dim);">${payDetails}</span>` : ''}
         </div>
       </div>
       <div class="city-res-item-price">
-        ${res.precio > 0 ? `<div>€${Number(res.precio).toFixed(0)}</div>` : '<div>—</div>'}
+        ${fin.total > 0 ? `<div>€${fin.total.toFixed(0)}</div>` : '<div>—</div>'}
         ${perPerson ? `<div style="font-size:0.75rem;font-weight:400;color:var(--text-dim);">${perPerson}</div>` : ''}
         ${res.personas > 1 ? `<div style="font-size:0.72rem;color:var(--text-dim);">👥 ${res.personas}</div>` : ''}
       </div>`;
@@ -2565,11 +2611,11 @@ function tripStats() {
     budget += DATA.records.filter(r => r.ciudad === city).reduce((s,r)=>s+(parseFloat(r.presupuesto)||0),0);
   });
   budget += DATA.records.filter(r => r.ciudad==='Vuelo'||r.ciudad==='Bus').reduce((s,r)=>s+(parseFloat(r.presupuesto)||0),0);
-  const resConfirmed = DATA.reservations.filter(r => r.payStatus === 'paid').length;
+  const resConfirmed = DATA.reservations.filter(r => reservaFinancials(r.id).payStatus === 'paid').length;
   return { cities, days, budget, resConfirmed, resTotal: DATA.reservations.length };
 }
 
-function renderDashboard() {
+function renderDashKpis() {
   const s = tripStats();
   const kpis = [
     { label:'Total de días',        value:s.days,                          icon:'📆', color:'var(--tourism)' },
@@ -2583,6 +2629,10 @@ function renderDashboard() {
       <span class="kpi-label">${k.label}</span>
       <span class="kpi-value" style="color:${k.color};">${k.value}</span>
     </div>`).join('');
+}
+
+function renderDashboard() {
+  renderDashKpis();
 
   const actions = [
     { label:'🗺️ Ver itinerario',    cls:'primary', act:() => switchView('home') },
@@ -2604,8 +2654,13 @@ function renderDashboard() {
   renderResumenReservas('dashResumenReservas');
   renderVacacionesList('dashVacationList');
   renderTrabajoList('dashWorkList');
-  // Monthly payments chart (COP) — needs the payment tables loaded
-  ensurePagosData().then(() => { if (currentView === 'dashboard') renderDashMonthlyChart(); });
+  // Reservas confirmadas KPI + resumen need compras/pagos loaded to be accurate.
+  ensurePagosData().then(() => {
+    if (currentView !== 'dashboard') return;
+    renderDashKpis();
+    renderResumenReservas('dashResumenReservas');
+    renderDashMonthlyChart();
+  });
 }
 
 // Gastos esperados por ciudad (presupuesto €) — reused by the Home dashboard.
@@ -2641,8 +2696,9 @@ function renderResumenReservas(targetId) {
   TIPOS.forEach(t => {
     const recs = DATA.reservations.filter(r => (r.tipo||'Alojamiento') === t.key);
     if (!recs.length) return;
-    const total = recs.reduce((s,r)=>s+(r.precio||0),0);
-    const paid  = recs.filter(r=>r.payStatus==='paid').reduce((s,r)=>s+(r.precio||0),0);
+    const fins  = recs.map(r => reservaFinancials(r.id));
+    const total = fins.reduce((s,f)=>s+f.total,0);
+    const paid  = fins.reduce((s,f)=>s+f.paid,0);
     const pend  = total - paid;
     gTotal += total; gPaid += paid; gPend += pend;
     html += `
@@ -2700,17 +2756,18 @@ function finReservationsFiltered() {
   return DATA.reservations.filter(r => {
     if (finFilters.ciudad    !== 'all' && r.ciudad !== finFilters.ciudad) return false;
     if (finFilters.categoria !== 'all' && (r.tipo||'Alojamiento') !== finFilters.categoria) return false;
-    if (finFilters.persona   !== 'all' && (r.whoPaid||'') !== finFilters.persona) return false;
+    if (finFilters.persona   !== 'all' && reservaFinancials(r.id).paidByName !== finFilters.persona) return false;
     return true;
   });
 }
 
-function renderFinDashboard() {
+async function renderFinDashboard() {
+  await ensurePagosData();
   if (!finFiltersInit) {
     finFiltersInit = true;
     const cities = [...new Set(DATA.reservations.map(r=>r.ciudad).filter(Boolean))].sort();
     const cats   = [...new Set(DATA.reservations.map(r=>r.tipo||'Alojamiento'))].sort();
-    const people = [...new Set(DATA.reservations.map(r=>r.whoPaid).filter(Boolean))].sort();
+    const people = [...new Set(pagosData.personas.map(p=>p.nombre).filter(Boolean))].sort();
     const fill = (id, vals) => {
       const sel = document.getElementById(id);
       vals.forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
@@ -2727,10 +2784,11 @@ function renderFinDashboard() {
   }
 
   const recs  = finReservationsFiltered();
-  const total = recs.reduce((s,r)=>s+(r.precio||0),0);
-  const paid  = recs.filter(r=>r.payStatus==='paid').reduce((s,r)=>s+(r.precio||0),0);
+  const fins  = recs.map(r => ({ r, fin: reservaFinancials(r.id) }));
+  const total = fins.reduce((s,{fin})=>s+fin.total,0);
+  const paid  = fins.reduce((s,{fin})=>s+fin.paid,0);
   const pend  = total - paid;
-  const confirmed = recs.filter(r=>r.payStatus==='paid').length;
+  const confirmed = fins.filter(({fin})=>fin.payStatus==='paid').length;
   const pendingCount = recs.length - confirmed;
 
   const kpis = [
@@ -2746,15 +2804,16 @@ function renderFinDashboard() {
       <span class="kpi-value" style="color:${k.color};">${k.value}</span>
     </div>`).join('');
 
-  finCharts.city = finBarChart('finCityCanvas','finCityMsg', finCharts.city, aggregateBy(recs, r=>r.ciudad||'—'),            '#5db8ff');
-  finCharts.cat  = finBarChart('finCatCanvas','finCatMsg',   finCharts.cat,  aggregateBy(recs, r=>r.tipo||'Alojamiento'),    '#b388ff');
-  finCharts.pers = finBarChart('finPersCanvas','finPersMsg', finCharts.pers, aggregateBy(recs, r=>r.whoPaid||'Sin asignar'), '#ff7849');
+  finCharts.city = finBarChart('finCityCanvas','finCityMsg', finCharts.city, aggregateBy(fins, ({r})=>r.ciudad||'—',            ({fin})=>fin.total), '#5db8ff');
+  finCharts.cat  = finBarChart('finCatCanvas','finCatMsg',   finCharts.cat,  aggregateBy(fins, ({r})=>r.tipo||'Alojamiento',    ({fin})=>fin.total), '#b388ff');
+  finCharts.pers = finBarChart('finPersCanvas','finPersMsg', finCharts.pers, aggregateBy(fins, ({fin})=>fin.paidByName||'Sin asignar', ({fin})=>fin.total), '#ff7849');
   finCharts.paid = finDoughnut('finPaidCanvas','finPaidMsg', finCharts.paid, paid, pend);
 }
 
-function aggregateBy(recs, keyFn) {
+function aggregateBy(items, keyFn, valueFn) {
+  const getValue = valueFn || (x => x.precio || 0);
   const m = {};
-  recs.forEach(r => { const k = keyFn(r); m[k] = (m[k]||0) + (r.precio||0); });
+  items.forEach(x => { const k = keyFn(x); m[k] = (m[k]||0) + (getValue(x)||0); });
   return Object.entries(m).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
 }
 
@@ -2801,16 +2860,17 @@ function refreshThemedCharts() {
 }
 
 // ── Reservations view ─────────────────────────────────────────────────────────
-function renderReservations() {
+async function renderReservations() {
+  await ensurePagosData();
   // ── Filter bar ──────────────────────────────────────────────────────────────
   const bar = document.getElementById('resFilterBar');
   bar.innerHTML = '';
   const FILTERS = [
-    { key:'all',    label:'Todas' },
-    { key:'paid',   label:'✅ Pagado' },
-    { key:'topay',  label:'📅 Por pagar' },
-    { key:'unpaid', label:'❌ Sin pagar' },
-    { key:'other',  label:'— Sin estado' },
+    { key:'all',     label:'Todas' },
+    { key:'paid',    label:'✅ Pagado' },
+    { key:'partial', label:'🟡 Parcial' },
+    { key:'unpaid',  label:'❌ Sin pagar' },
+    { key:'none',    label:'— Sin costo' },
   ];
   FILTERS.forEach(f => {
     const btn = document.createElement('button');
@@ -2826,7 +2886,7 @@ function renderReservations() {
     const allCityRecs = DATA.reservations.filter(r => r.ciudad === city);
     const cityRecs = resPayFilter === 'all'
       ? allCityRecs
-      : allCityRecs.filter(r => (r.payStatus || 'other') === resPayFilter);
+      : allCityRecs.filter(r => reservaFinancials(r.id).payStatus === resPayFilter);
     if (!cityRecs.length && resPayFilter !== 'all') return;
     const section = document.createElement('div');
     section.className = 'res-city-section';
@@ -2854,6 +2914,8 @@ function renderReservations() {
     } else {
       cityRecs.forEach(res => {
         const idx = DATA.reservations.indexOf(res);
+        const fin = reservaFinancials(res.id);
+        const payLabel = { paid:'✅ Pagado', partial:'🟡 Parcial', unpaid:'❌ Sin pagar', none:'' }[fin.payStatus] || '';
         const card = document.createElement('div');
         card.className = 'res-card';
         card.style.setProperty('--city-color', CITY_COLORS[cidx]);
@@ -2877,14 +2939,14 @@ function renderReservations() {
           </div>`:''}
           <div class="res-card-row">
             ${res.personas?`👥 ${res.personas} persona${res.personas>1?'s':''}`:''}
-            ${res.precio>0?`&nbsp;·&nbsp;💰 <strong style="color:var(--accent)">€${Number(res.precio).toFixed(0)}</strong>`:''}
+            ${fin.total>0?`&nbsp;·&nbsp;💰 <strong style="color:var(--accent)">€${fin.total.toFixed(0)}</strong>`:''}
           </div>
           <div class="res-card-row" style="margin-top:6px;flex-wrap:wrap;gap:6px;">
             ${res.tipo?`<span class="tipo-badge ${res.tipo}">${res.tipo==='Alojamiento'?'🏨':res.tipo==='Transporte'?'🚆':'🏛️'} ${res.tipo}</span>`:''}
-            ${res.payStatus?`<span class="pay-badge ${res.payStatus}">${res.payStatus==='paid'?'✅ Pagado':res.payStatus==='topay'?'📅 Por pagar':'❌ Sin pagar'}</span>`:''}
-            ${res.payStatus==='paid'&&res.whoPaid?`<span style="font-size:0.78rem;color:var(--text-dim);">por ${res.whoPaid}</span>`:''}
-            ${res.payStatus==='paid'&&res.installments>1?`<span style="font-size:0.78rem;color:var(--text-dim);">${res.installments} cuotas</span>`:''}
-            ${res.payDue?`<span style="font-size:0.78rem;color:var(--work);">vence ${res.payDue}</span>`:''}
+            ${fin.payStatus!=='none'?`<span class="pay-badge ${fin.payStatus}">${payLabel}</span>`:''}
+            ${fin.payStatus==='paid'&&fin.paidByName?`<span style="font-size:0.78rem;color:var(--text-dim);">por ${fin.paidByName}</span>`:''}
+            ${fin.installments>1?`<span style="font-size:0.78rem;color:var(--text-dim);">${fin.installments} cuotas</span>`:''}
+            ${(fin.payStatus==='unpaid'||fin.payStatus==='partial')&&fin.nextDue?`<span style="font-size:0.78rem;color:var(--work);">vence ${fin.nextDue}</span>`:''}
           </div>`;
         card.querySelector('.edit-res').onclick = () => openResModal({reservation:res, index:idx});
         card.querySelector('.del-res').onclick = async () => {
@@ -2910,14 +2972,17 @@ function renderReservations() {
 function getPagosViewData() {
   const { compras, participantes, personas } = pagosData;
   if (!pagosFilterPersonas.length) {
-    return compras.map(c => ({
-      ...c,
-      _share: 1,
-      _selectedNames: [],
-      _efectivoTotal:     c.valor_total || 0,
-      _efectivoPagado:    c.valor_cuota * c.cuotas_pagadas,
-      _efectivoPendiente: c.faltante_total || 0,
-    }));
+    return compras.map(c => {
+      const fin = compraFinancials(c.id);
+      return {
+        ...c,
+        _share: 1,
+        _selectedNames: [],
+        _efectivoTotal:     fin.total,
+        _efectivoPagado:    fin.paid,
+        _efectivoPendiente: fin.pending,
+      };
+    });
   }
   const selectedIds = new Set(
     personas.filter(p => pagosFilterPersonas.includes(p.nombre)).map(p => p.id)
@@ -2928,13 +2993,14 @@ function getPagosViewData() {
       const allParts      = participantes.filter(p => p.compra_id === c.id);
       const selectedParts = allParts.filter(p => selectedIds.has(p.persona_id));
       const share = allParts.length ? selectedParts.length / allParts.length : 1;
+      const fin = compraFinancials(c.id);
       return {
         ...c,
         _share: share,
         _selectedNames: selectedParts.map(p => personas.find(pe => pe.id === p.persona_id)?.nombre).filter(Boolean),
-        _efectivoTotal:     (c.valor_total || 0) * share,
-        _efectivoPagado:    c.valor_cuota * c.cuotas_pagadas * share,
-        _efectivoPendiente: (c.faltante_total || 0) * share,
+        _efectivoTotal:     fin.total * share,
+        _efectivoPagado:    fin.paid * share,
+        _efectivoPendiente: fin.pending * share,
       };
     });
 }
@@ -3425,7 +3491,8 @@ function buildMonthlyChart(canvasId, msgId, prevChart) {
       const compra  = viewData.find(c => c.id === cid);
       const reserva = (DATA.reservations || []).find(r => String(r.id) === String(compra?.reserva_id));
       const name    = compra?.descripcion ?? '—';
-      const res     = reserva ? ` (${reserva.nombre}` + (reserva.precio ? ` · $${Math.round(reserva.precio).toLocaleString('es-CO')}` : '') + ')' : '';
+      const resTotal = reserva ? reservaFinancials(reserva.id).total : 0;
+      const res     = reserva ? ` (${reserva.nombre}` + (resTotal ? ` · $${Math.round(resTotal).toLocaleString('es-CO')}` : '') + ')' : '';
       return `${name}${res}: $${Math.round(amt.paid + amt.pending).toLocaleString('es-CO')}`;
     })
   );
@@ -3506,7 +3573,7 @@ function renderPagosCompraList() {
     }).join('');
     const faltante = c._efectivoPendiente;
     return `
-      <div class="pagos-compra-item">
+      <div class="pagos-compra-item" data-compra-id="${c.id}">
         <div class="pagos-compra-head">
           <div class="pagos-compra-name">${c.descripcion}${shareLabel}</div>
           <div style="text-align:right;flex-shrink:0;">
@@ -3925,32 +3992,71 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Reservation modal ─────────────────────────────────────────────────────────
-function updatePayFields(status) {
-  document.getElementById('rPayPaidFields').classList.toggle('hidden', status !== 'paid');
+// The reservation itself only ever stores descriptive fields. Cost/payment
+// live exclusively in compras/pagos — reconcileReservaCompra() is the one
+// place that creates/updates the linked purchase + its installments.
+function goToManagePagos(compraId) {
+  finSubView = 'pagos';
+  switchView('finanzas');
+  if (compraId != null) {
+    setTimeout(() => {
+      const el = document.querySelector(`.pagos-compra-item[data-compra-id="${compraId}"]`);
+      if (!el) return;
+      el.scrollIntoView({ behavior:'smooth', block:'center' });
+      el.style.outline = '2px solid var(--accent)';
+      setTimeout(() => { el.style.outline = ''; }, 1600);
+    }, 250);
+  }
 }
-document.getElementById('rPayStatus').onchange = e => updatePayFields(e.target.value);
 
 let resModalIdx = null;
-function openResModal({reservation, index, ciudad}) {
+async function openResModal({reservation, index, ciudad}) {
+  await ensurePagosData();
   resModalIdx = index !== undefined ? index : null;
   const isNew = !reservation;
+  const fin = reservation ? reservaFinancials(reservation.id) : null;
+
   document.getElementById('resModalTitle').textContent = isNew ? 'Nueva reserva' : 'Editar reserva';
   document.getElementById('rBtnDelete').classList.toggle('hidden', isNew);
   document.getElementById('rNombre').value       = reservation?(reservation.nombre       ||''):'';
   document.getElementById('rLink').value         = reservation?(reservation.link          ||''):'';
   document.getElementById('rConfirmacion').value = reservation?(reservation.confirmacion  ||''):'';
-  document.getElementById('rPrecio').value       = reservation?(reservation.precio        ||0) :0;
   document.getElementById('rUbicacion').value    = reservation?(reservation.ubicacion     ||''):'';
   document.getElementById('rPersonas').value     = reservation?(reservation.personas      ||1) :1;
   document.getElementById('rFecha').value        = reservation?(reservation.fecha         ||''):'';
   document.getElementById('rCheckin').value      = reservation?(reservation.checkin       ||''):'';
   document.getElementById('rCheckout').value     = reservation?(reservation.checkout      ||''):'';
   document.getElementById('rTipo').value         = reservation?(reservation.tipo          ||'Alojamiento'):'Alojamiento';
-  document.getElementById('rPayStatus').value    = reservation?(reservation.payStatus     ||''):'';
-  document.getElementById('rWhoPaid').value      = reservation?(reservation.whoPaid       ||''):'';
-  document.getElementById('rInstallments').value = reservation?(reservation.installments  ||''):'';
-  document.getElementById('rPayDue').value       = reservation?(reservation.payDue        ||''):'';
-  updatePayFields(reservation?reservation.payStatus:'');
+
+  document.getElementById('rPrecio').value       = fin ? fin.total : 0;
+  document.getElementById('rInstallments').value = fin && fin.installments ? fin.installments : 1;
+  document.getElementById('rPayDue').value       = fin && fin.nextDue ? fin.nextDue : '';
+
+  const whoSel = document.getElementById('rWhoPaid');
+  whoSel.innerHTML = '<option value="">— Sin especificar —</option>';
+  pagosData.personas.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.nombre;
+    whoSel.appendChild(opt);
+  });
+  const singleCompra = fin && fin.compras.length === 1 ? fin.compras[0] : null;
+  whoSel.value = singleCompra && singleCompra.paid_by != null ? String(singleCompra.paid_by) : '';
+
+  const summaryEl = document.getElementById('rFinSummary');
+  const linkEl    = document.getElementById('rManagePagosLink');
+  if (!fin || fin.total <= 0) {
+    summaryEl.textContent = isNew ? '' : 'Sin costo registrado todavía.';
+  } else {
+    const statusLabel = { paid:'✅ Pagado', partial:'🟡 Pago parcial', unpaid:'❌ Sin pagar' }[fin.payStatus] || '';
+    summaryEl.textContent = `€${fin.total.toFixed(0)} total · €${fin.paid.toFixed(0)} pagado · ${statusLabel}` + (fin.nextDue ? ` · próxima cuota ${fin.nextDue}` : '');
+  }
+  const showLink = !isNew && fin && fin.compras.length >= 1;
+  linkEl.classList.toggle('hidden', !showLink);
+  if (showLink) {
+    const compraId = fin.compras.length === 1 ? fin.compras[0].id : null;
+    linkEl.onclick = e => { e.preventDefault(); closeResModal(); goToManagePagos(compraId); };
+  }
+
   const sel = document.getElementById('rCiudad');
   sel.innerHTML = '';
   DATA.cityOrder.forEach(c => {
@@ -3966,6 +4072,71 @@ function closeResModal() {
   document.getElementById('resModalOverlay').classList.add('hidden');
   resModalIdx = null;
 }
+
+// Creates/updates the compra + pagos linked to a reserva to match the modal's
+// price/installments fields. Never touches an already-paid pagos row, and
+// skips entirely when a reserva has more than one linked compra (ambiguous —
+// edit those manually in the Pagos tab instead).
+async function reconcileReservaCompra(reservaId, { precio, cuotasTotales, paidBy, payDue, descripcion }) {
+  const existing = pagosData.compras.filter(c => String(c.reserva_id) === String(reservaId));
+  if (precio <= 0) return;
+  if (existing.length > 1) {
+    console.warn(`Reserva ${reservaId} has multiple compras — edit installments in the Pagos tab.`);
+    return;
+  }
+
+  if (existing.length === 0) {
+    const { data: compra, error } = await sb.from('compras').insert([{
+      reserva_id: reservaId, descripcion, valor_total: precio, cuotas_totales: cuotasTotales,
+      cuotas_pagadas: 0, faltante_total: precio, fecha_pago: payDue, paid_by: paidBy
+    }]).select().single();
+    if (error) throw error;
+    const per = Math.floor((precio / cuotasTotales) * 100) / 100;
+    const rows = Array.from({ length: cuotasTotales }, (_, i) => ({
+      compra_id: compra.id, numero_cuota: i + 1,
+      valor_cuota: i === cuotasTotales - 1 ? +(precio - per * (cuotasTotales - 1)).toFixed(2) : per,
+      pagado: false, fecha_pago: payDue
+    }));
+    const { error: e2 } = await sb.from('pagos').insert(rows);
+    if (e2) throw e2;
+    return;
+  }
+
+  const compra = existing[0];
+  await sb.from('compras').update({ descripcion, paid_by: paidBy }).eq('id', compra.id);
+
+  const totalChanged = Math.abs(precio - (Number(compra.valor_total) || 0)) > 0.005;
+  const countChanged = cuotasTotales !== compra.cuotas_totales;
+  if (!totalChanged && !countChanged) return;
+
+  const pagosForCompra = pagosData.pagos.filter(p => p.compra_id === compra.id);
+  const paid   = pagosForCompra.filter(p => p.pagado);
+  const unpaid = pagosForCompra.filter(p => !p.pagado).sort((a,b) => a.numero_cuota - b.numero_cuota);
+  const paidTotal = paid.reduce((s,p) => s + (Number(p.valor_cuota) || 0), 0);
+  const targetCuotas  = Math.max(cuotasTotales, paid.length); // never fewer than what's already paid
+  const remaining     = Math.max(0, precio - paidTotal);
+  const neededUnpaid  = targetCuotas - paid.length;
+
+  await sb.from('compras').update({ valor_total: precio, cuotas_totales: targetCuotas }).eq('id', compra.id);
+
+  if (neededUnpaid <= 0) {
+    for (const p of unpaid) await sb.from('pagos').delete().eq('id', p.id);
+    return;
+  }
+  const per = Math.floor((remaining / neededUnpaid) * 100) / 100;
+  for (const p of unpaid.slice(neededUnpaid)) await sb.from('pagos').delete().eq('id', p.id);
+  const kept = unpaid.slice(0, neededUnpaid);
+  for (let i = 0; i < neededUnpaid; i++) {
+    const numero = paid.length + i + 1;
+    const valor  = i === neededUnpaid - 1 ? +(remaining - per * (neededUnpaid - 1)).toFixed(2) : per;
+    if (i < kept.length) {
+      await sb.from('pagos').update({ numero_cuota: numero, valor_cuota: valor }).eq('id', kept[i].id);
+    } else {
+      await sb.from('pagos').insert([{ compra_id: compra.id, numero_cuota: numero, valor_cuota: valor, pagado: false, fecha_pago: payDue }]);
+    }
+  }
+}
+
 async function saveResModal() {
   const nombre = document.getElementById('rNombre').value.trim();
   if (!nombre) { document.getElementById('rNombre').focus(); return; }
@@ -3973,7 +4144,6 @@ async function saveResModal() {
     nombre,
     link:         document.getElementById('rLink').value.trim(),
     confirmacion: document.getElementById('rConfirmacion').value.trim(),
-    precio:       parseFloat(document.getElementById('rPrecio').value) || 0,
     ubicacion:    document.getElementById('rUbicacion').value.trim(),
     personas:     parseInt(document.getElementById('rPersonas').value) || 1,
     ciudad:       document.getElementById('rCiudad').value,
@@ -3981,19 +4151,29 @@ async function saveResModal() {
     checkin:      document.getElementById('rCheckin').value,
     checkout:     document.getElementById('rCheckout').value,
     tipo:         document.getElementById('rTipo').value,
-    payStatus:    document.getElementById('rPayStatus').value,
-    whoPaid:      document.getElementById('rWhoPaid').value.trim(),
-    installments: parseInt(document.getElementById('rInstallments').value) || null,
-    payDue:       document.getElementById('rPayDue').value || null
   };
+  const precio        = parseFloat(document.getElementById('rPrecio').value) || 0;
+  const cuotasTotales = Math.max(1, parseInt(document.getElementById('rInstallments').value) || 1);
+  const payDue        = document.getElementById('rPayDue').value || null;
+  const whoPaidRaw     = document.getElementById('rWhoPaid').value;
+  const paidBy         = whoPaidRaw ? (pagosData.personas.find(p => String(p.id) === whoPaidRaw)?.id ?? null) : null;
   try {
+    let reservaId;
     if (resModalIdx !== null) {
       const ex = DATA.reservations[resModalIdx];
       if (ex.id) { await dbUpdateReservation(ex.id, res); res.id = ex.id; }
       DATA.reservations[resModalIdx] = res;
+      reservaId = ex.id;
     } else {
       const inserted = await dbInsertReservation(res);
       DATA.reservations.push(inserted || res);
+      reservaId = (inserted || res).id;
+    }
+    if (reservaId != null) {
+      await reconcileReservaCompra(reservaId, { precio, cuotasTotales, paidBy, payDue, descripcion: nombre });
+      const [compras, pagos] = await Promise.all([dbLoadCompras(), dbLoadPagos()]);
+      pagosData.compras = compras;
+      pagosData.pagos   = pagos;
     }
     closeResModal(); renderReservations();
   } catch(err) { alert('Error al guardar reserva: ' + err.message); }
