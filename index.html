@@ -3049,7 +3049,7 @@ function renderPagosCalendar() {
 
   const byDate = {};
   filteredPagos.forEach(p => {
-    const d = p.fecha_pago;
+    const d = p.fecha_pago.replace(/\//g, '-');
     if (!byDate[d]) byDate[d] = [];
     byDate[d].push({ ...p, _amount: p.valor_cuota * shareOf(p.compra_id) });
   });

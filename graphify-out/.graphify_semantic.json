@@ -1,0 +1,398 @@
+{
+  "nodes": [
+    {
+      "id": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "label": "PUSH_SETUP.md",
+      "type": "file",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "top"
+      },
+      "confidence": 1.0
+    },
+    {
+      "id": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "label": "index.html",
+      "type": "file",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "<head> / top"
+      },
+      "confidence": 1.0
+    },
+    {
+      "id": "section:PUSH_SETUP:generate-vapid-keys",
+      "label": "Generate VAPID keys",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 1. Generate your VAPID keys"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "section:PUSH_SETUP:put-public-key",
+      "label": "Put the public key in the app",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 2. Put the public key in the app"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "section:PUSH_SETUP:create-subscriptions-table",
+      "label": "Create the subscriptions table",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 3. Create the subscriptions table"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "section:PUSH_SETUP:deploy-edge-function",
+      "label": "Deploy the Edge Function",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 4. Deploy the Edge Function"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "section:PUSH_SETUP:set-secrets",
+      "label": "Set the function secrets",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 5. Set the function secrets"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "section:PUSH_SETUP:schedule-daily",
+      "label": "Schedule it daily",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 6. Schedule it daily"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "config:VAPID_PUBLIC_KEY",
+      "label": "VAPID_PUBLIC_KEY",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5; step 2 instructs pasting into index.html"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "config:VAPID_PRIVATE_KEY",
+      "label": "VAPID_PRIVATE_KEY",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "config:VAPID_SUBJECT",
+      "label": "VAPID_SUBJECT",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "config:CRON_SECRET",
+      "label": "CRON_SECRET",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "config:REMINDER_TZ",
+      "label": "REMINDER_TZ",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5 (optional)"
+      },
+      "confidence": 0.9
+    },
+    {
+      "id": "config:SUPABASE_URL",
+      "label": "SUPABASE_URL",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Step 5 note: provided automatically"
+      },
+      "confidence": 0.9
+    },
+    {
+      "id": "config:SUPABASE_SERVICE_ROLE_KEY",
+      "label": "SUPABASE_SERVICE_ROLE_KEY",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Step 5 note: provided automatically"
+      },
+      "confidence": 0.9
+    },
+    {
+      "id": "function:send-payment-reminders",
+      "label": "send-payment-reminders",
+      "type": "function",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Step 4: deploy function with this exact name"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "config:cron:0_13_*_*_*",
+      "label": "cron: '0 13 * * *' (daily at 13:00 UTC)",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Step 6: cron expression '0 13 * * *'"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "entity:iphone-home-screen-requirement",
+      "label": "iPhone Home Screen install requirement",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "iPhone requirement note (installed to Home Screen)"
+      },
+      "confidence": 0.9
+    },
+    {
+      "id": "entity:curl-endpoint-send-payment-reminders",
+      "label": "Supabase functions endpoint (example)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "curl example calling /functions/v1/send-payment-reminders"
+      },
+      "confidence": 0.9
+    },
+    {
+      "id": "config:index:VAPID_PUBLIC_KEY_placeholder",
+      "label": "index.html VAPID_PUBLIC_KEY placeholder",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "const VAPID_PUBLIC_KEY = ''; // placeholder"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "entity:index:manifest-link",
+      "label": "manifest.json (linked)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "<link rel=\"manifest\" href=\"manifest.json\">"
+      },
+      "confidence": 0.9
+    },
+    {
+      "id": "entity:index:map-element",
+      "label": "#map (map container)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "#map CSS / element in page"
+      },
+      "confidence": 0.85
+    },
+    {
+      "id": "entity:index:supabase-js",
+      "label": "@supabase/supabase-js (script import)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "<script src=\"...supabase-js@2...\"></script>"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "entity:index:leaflet-css",
+      "label": "Leaflet CSS (import)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "<link rel=\"stylesheet\" href=\"...leaflet.css\">"
+      },
+      "confidence": 0.95
+    },
+    {
+      "id": "icon.svg#node:0",
+      "label": "icon.svg",
+      "type": "image",
+      "source_location": "/Users/vale/Documents/Python/europa-2026/icon.svg#L1-L4",
+      "confidence": 0.9
+    },
+    {
+      "id": "icon.svg#node:1",
+      "label": "🌍",
+      "type": "text",
+      "source_location": "/Users/vale/Documents/Python/europa-2026/icon.svg#L3",
+      "confidence": 0.95
+    }
+  ],
+  "edges": [
+    {
+      "source": "section:PUSH_SETUP:generate-vapid-keys",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "label": "is part of",
+      "confidence": 1.0
+    },
+    {
+      "source": "section:PUSH_SETUP:put-public-key",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "label": "is part of",
+      "confidence": 1.0
+    },
+    {
+      "source": "section:PUSH_SETUP:create-subscriptions-table",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "label": "is part of",
+      "confidence": 1.0
+    },
+    {
+      "source": "section:PUSH_SETUP:deploy-edge-function",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "label": "is part of",
+      "confidence": 1.0
+    },
+    {
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "label": "is part of",
+      "confidence": 1.0
+    },
+    {
+      "source": "section:PUSH_SETUP:schedule-daily",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "label": "is part of",
+      "confidence": 1.0
+    },
+    {
+      "source": "section:PUSH_SETUP:put-public-key",
+      "target": "config:VAPID_PUBLIC_KEY",
+      "label": "mentions",
+      "confidence": 0.95
+    },
+    {
+      "source": "config:index:VAPID_PUBLIC_KEY_placeholder",
+      "target": "config:VAPID_PUBLIC_KEY",
+      "label": "placeholder-for",
+      "confidence": 0.98
+    },
+    {
+      "source": "section:PUSH_SETUP:deploy-edge-function",
+      "target": "function:send-payment-reminders",
+      "label": "mentions",
+      "confidence": 0.95
+    },
+    {
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "config:VAPID_PUBLIC_KEY",
+      "label": "requires",
+      "confidence": 0.95
+    },
+    {
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "config:VAPID_PRIVATE_KEY",
+      "label": "requires",
+      "confidence": 0.95
+    },
+    {
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "config:VAPID_SUBJECT",
+      "label": "requires",
+      "confidence": 0.95
+    },
+    {
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "config:CRON_SECRET",
+      "label": "requires",
+      "confidence": 0.95
+    },
+    {
+      "source": "config:cron:0_13_*_*_*",
+      "target": "function:send-payment-reminders",
+      "label": "triggers",
+      "confidence": 0.9
+    },
+    {
+      "source": "config:CRON_SECRET",
+      "target": "config:cron:0_13_*_*_*",
+      "label": "used-in (replace YOUR_CRON_SECRET)",
+      "confidence": 0.9
+    },
+    {
+      "source": "entity:curl-endpoint-send-payment-reminders",
+      "target": "function:send-payment-reminders",
+      "label": "invokes",
+      "confidence": 0.9
+    },
+    {
+      "source": "entity:index:manifest-link",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "label": "linked-from",
+      "confidence": 0.95
+    },
+    {
+      "source": "entity:index:supabase-js",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "label": "imported-by",
+      "confidence": 0.95
+    },
+    {
+      "source": "entity:index:leaflet-css",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "label": "imported-by",
+      "confidence": 0.95
+    },
+    {
+      "source": "entity:index:map-element",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "label": "contained-in",
+      "confidence": 0.9
+    },
+    {
+      "source": "entity:iphone-home-screen-requirement",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "label": "mentioned-in",
+      "confidence": 0.9
+    },
+    {
+      "id": "icon.svg#edge:0",
+      "label": "contains_text",
+      "type": "contains",
+      "from_id": "icon.svg#node:0",
+      "to_id": "icon.svg#node:1",
+      "source_location": "/Users/vale/Documents/Python/europa-2026/icon.svg#L3",
+      "confidence": 0.9
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

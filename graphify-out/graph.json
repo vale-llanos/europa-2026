@@ -1,0 +1,801 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "manifest.json",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "manifest",
+      "community": 0,
+      "norm_label": "manifest.json"
+    },
+    {
+      "label": "name",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "manifest_name",
+      "community": 0,
+      "norm_label": "name"
+    },
+    {
+      "label": "short_name",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "manifest_short_name",
+      "community": 0,
+      "norm_label": "short_name"
+    },
+    {
+      "label": "description",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "manifest_description",
+      "community": 0,
+      "norm_label": "description"
+    },
+    {
+      "label": "start_url",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "manifest_start_url",
+      "community": 0,
+      "norm_label": "start_url"
+    },
+    {
+      "label": "scope",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "manifest_scope",
+      "community": 0,
+      "norm_label": "scope"
+    },
+    {
+      "label": "display",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "manifest_display",
+      "community": 0,
+      "norm_label": "display"
+    },
+    {
+      "label": "background_color",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "manifest_background_color",
+      "community": 0,
+      "norm_label": "background_color"
+    },
+    {
+      "label": "theme_color",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "manifest_theme_color",
+      "community": 0,
+      "norm_label": "theme_color"
+    },
+    {
+      "label": "orientation",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "manifest_orientation",
+      "community": 0,
+      "norm_label": "orientation"
+    },
+    {
+      "label": "icons",
+      "file_type": "code",
+      "source_file": "manifest.json",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "manifest_icons",
+      "community": 0,
+      "norm_label": "icons"
+    },
+    {
+      "label": "index.ts",
+      "file_type": "code",
+      "source_file": "supabase/functions/send-payment-reminders/index.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "supabase_functions_send_payment_reminders_index",
+      "community": 5,
+      "norm_label": "index.ts"
+    },
+    {
+      "label": "sb",
+      "file_type": "code",
+      "source_file": "supabase/functions/send-payment-reminders/index.ts",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "supabase_functions_send_payment_reminders_index_sb",
+      "community": 5,
+      "norm_label": "sb"
+    },
+    {
+      "label": "startOfToday()",
+      "file_type": "code",
+      "source_file": "supabase/functions/send-payment-reminders/index.ts",
+      "source_location": "L30",
+      "_origin": "ast",
+      "id": "supabase_functions_send_payment_reminders_index_startoftoday",
+      "community": 5,
+      "norm_label": "startoftoday()"
+    },
+    {
+      "label": "sw.js",
+      "file_type": "code",
+      "source_file": "sw.js",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "sw",
+      "community": 6,
+      "norm_label": "sw.js"
+    },
+    {
+      "label": "ASSETS",
+      "file_type": "code",
+      "source_file": "sw.js",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "sw_assets",
+      "community": 6,
+      "norm_label": "assets"
+    },
+    {
+      "label": "PUSH_SETUP.md",
+      "type": "file",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "top"
+      },
+      "confidence": 1.0,
+      "file_type": "concept",
+      "id": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "community": 4,
+      "norm_label": "push_setup.md"
+    },
+    {
+      "label": "index.html",
+      "type": "file",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "<head> / top"
+      },
+      "confidence": 1.0,
+      "file_type": "concept",
+      "id": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "community": 3,
+      "norm_label": "index.html"
+    },
+    {
+      "label": "Generate VAPID keys",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 1. Generate your VAPID keys"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "section:PUSH_SETUP:generate-vapid-keys",
+      "community": 4,
+      "norm_label": "generate vapid keys"
+    },
+    {
+      "label": "Put the public key in the app",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 2. Put the public key in the app"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "section:PUSH_SETUP:put-public-key",
+      "community": 1,
+      "norm_label": "put the public key in the app"
+    },
+    {
+      "label": "Create the subscriptions table",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 3. Create the subscriptions table"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "section:PUSH_SETUP:create-subscriptions-table",
+      "community": 4,
+      "norm_label": "create the subscriptions table"
+    },
+    {
+      "label": "Deploy the Edge Function",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 4. Deploy the Edge Function"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "section:PUSH_SETUP:deploy-edge-function",
+      "community": 2,
+      "norm_label": "deploy the edge function"
+    },
+    {
+      "label": "Set the function secrets",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 5. Set the function secrets"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "section:PUSH_SETUP:set-secrets",
+      "community": 1,
+      "norm_label": "set the function secrets"
+    },
+    {
+      "label": "Schedule it daily",
+      "type": "section",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "## 6. Schedule it daily"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "section:PUSH_SETUP:schedule-daily",
+      "community": 4,
+      "norm_label": "schedule it daily"
+    },
+    {
+      "label": "VAPID_PUBLIC_KEY",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5; step 2 instructs pasting into index.html"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "config:VAPID_PUBLIC_KEY",
+      "community": 1,
+      "norm_label": "vapid_public_key"
+    },
+    {
+      "label": "VAPID_PRIVATE_KEY",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "config:VAPID_PRIVATE_KEY",
+      "community": 1,
+      "norm_label": "vapid_private_key"
+    },
+    {
+      "label": "VAPID_SUBJECT",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "config:VAPID_SUBJECT",
+      "community": 1,
+      "norm_label": "vapid_subject"
+    },
+    {
+      "label": "CRON_SECRET",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "config:CRON_SECRET",
+      "community": 2,
+      "norm_label": "cron_secret"
+    },
+    {
+      "label": "REMINDER_TZ",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Secrets table / Step 5 (optional)"
+      },
+      "confidence": 0.9,
+      "file_type": "concept",
+      "id": "config:REMINDER_TZ",
+      "community": 7,
+      "norm_label": "reminder_tz"
+    },
+    {
+      "label": "SUPABASE_URL",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Step 5 note: provided automatically"
+      },
+      "confidence": 0.9,
+      "file_type": "concept",
+      "id": "config:SUPABASE_URL",
+      "community": 9,
+      "norm_label": "supabase_url"
+    },
+    {
+      "label": "SUPABASE_SERVICE_ROLE_KEY",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Step 5 note: provided automatically"
+      },
+      "confidence": 0.9,
+      "file_type": "concept",
+      "id": "config:SUPABASE_SERVICE_ROLE_KEY",
+      "community": 8,
+      "norm_label": "supabase_service_role_key"
+    },
+    {
+      "label": "send-payment-reminders",
+      "type": "function",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Step 4: deploy function with this exact name"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "function:send-payment-reminders",
+      "community": 2,
+      "norm_label": "send-payment-reminders"
+    },
+    {
+      "label": "cron: '0 13 * * *' (daily at 13:00 UTC)",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "Step 6: cron expression '0 13 * * *'"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "config:cron:0_13_*_*_*",
+      "community": 2,
+      "norm_label": "cron: '0 13 * * *' (daily at 13:00 utc)"
+    },
+    {
+      "label": "iPhone Home Screen install requirement",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "iPhone requirement note (installed to Home Screen)"
+      },
+      "confidence": 0.9,
+      "file_type": "concept",
+      "id": "entity:iphone-home-screen-requirement",
+      "community": 4,
+      "norm_label": "iphone home screen install requirement"
+    },
+    {
+      "label": "Supabase functions endpoint (example)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+        "pointer": "curl example calling /functions/v1/send-payment-reminders"
+      },
+      "confidence": 0.9,
+      "file_type": "concept",
+      "id": "entity:curl-endpoint-send-payment-reminders",
+      "community": 2,
+      "norm_label": "supabase functions endpoint (example)"
+    },
+    {
+      "label": "index.html VAPID_PUBLIC_KEY placeholder",
+      "type": "config",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "const VAPID_PUBLIC_KEY = ''; // placeholder"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "config:index:VAPID_PUBLIC_KEY_placeholder",
+      "community": 1,
+      "norm_label": "index.html vapid_public_key placeholder"
+    },
+    {
+      "label": "manifest.json (linked)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "<link rel=\"manifest\" href=\"manifest.json\">"
+      },
+      "confidence": 0.9,
+      "file_type": "concept",
+      "id": "entity:index:manifest-link",
+      "community": 3,
+      "norm_label": "manifest.json (linked)"
+    },
+    {
+      "label": "#map (map container)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "#map CSS / element in page"
+      },
+      "confidence": 0.85,
+      "file_type": "concept",
+      "id": "entity:index:map-element",
+      "community": 3,
+      "norm_label": "#map (map container)"
+    },
+    {
+      "label": "@supabase/supabase-js (script import)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "<script src=\"...supabase-js@2...\"></script>"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "entity:index:supabase-js",
+      "community": 3,
+      "norm_label": "@supabase/supabase-js (script import)"
+    },
+    {
+      "label": "Leaflet CSS (import)",
+      "type": "entity",
+      "source_location": {
+        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
+        "pointer": "<link rel=\"stylesheet\" href=\"...leaflet.css\">"
+      },
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "entity:index:leaflet-css",
+      "community": 3,
+      "norm_label": "leaflet css (import)"
+    },
+    {
+      "label": "icon.svg",
+      "type": "image",
+      "source_location": "/Users/vale/Documents/Python/europa-2026/icon.svg#L1-L4",
+      "confidence": 0.9,
+      "file_type": "concept",
+      "id": "icon.svg#node:0",
+      "community": 10,
+      "norm_label": "icon.svg"
+    },
+    {
+      "label": "\ud83c\udf0d",
+      "type": "text",
+      "source_location": "/Users/vale/Documents/Python/europa-2026/icon.svg#L3",
+      "confidence": 0.95,
+      "file_type": "concept",
+      "id": "icon.svg#node:1",
+      "community": 11,
+      "norm_label": "\ud83c\udf0d"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_background_color",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_description",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_display",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_icons",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_name",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_orientation",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_scope",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_short_name",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_start_url",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "manifest.json",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "manifest",
+      "target": "manifest_theme_color",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/send-payment-reminders/index.ts",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "supabase_functions_send_payment_reminders_index",
+      "target": "supabase_functions_send_payment_reminders_index_sb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/send-payment-reminders/index.ts",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "supabase_functions_send_payment_reminders_index",
+      "target": "supabase_functions_send_payment_reminders_index_startoftoday",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "sw.js",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "sw",
+      "target": "sw_assets",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "mentioned-in",
+      "confidence": 0.9,
+      "source_file": "",
+      "source": "entity:iphone-home-screen-requirement",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "is part of",
+      "confidence": 1.0,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:create-subscriptions-table",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "is part of",
+      "confidence": 1.0,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:deploy-edge-function",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "is part of",
+      "confidence": 1.0,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:generate-vapid-keys",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "is part of",
+      "confidence": 1.0,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:put-public-key",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "is part of",
+      "confidence": 1.0,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:schedule-daily",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "is part of",
+      "confidence": 1.0,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "imported-by",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "entity:index:leaflet-css",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "linked-from",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "entity:index:manifest-link",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "contained-in",
+      "confidence": 0.9,
+      "source_file": "",
+      "source": "entity:index:map-element",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "imported-by",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "entity:index:supabase-js",
+      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "mentions",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:put-public-key",
+      "target": "config:VAPID_PUBLIC_KEY",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "mentions",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:deploy-edge-function",
+      "target": "function:send-payment-reminders",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "requires",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "config:CRON_SECRET",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "requires",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "config:VAPID_PRIVATE_KEY",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "requires",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "config:VAPID_PUBLIC_KEY",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "requires",
+      "confidence": 0.95,
+      "source_file": "",
+      "source": "section:PUSH_SETUP:set-secrets",
+      "target": "config:VAPID_SUBJECT",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "placeholder-for",
+      "confidence": 0.98,
+      "source_file": "",
+      "source": "config:index:VAPID_PUBLIC_KEY_placeholder",
+      "target": "config:VAPID_PUBLIC_KEY",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "used-in (replace YOUR_CRON_SECRET)",
+      "confidence": 0.9,
+      "source_file": "",
+      "source": "config:CRON_SECRET",
+      "target": "config:cron:0_13_*_*_*",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "triggers",
+      "confidence": 0.9,
+      "source_file": "",
+      "source": "config:cron:0_13_*_*_*",
+      "target": "function:send-payment-reminders",
+      "confidence_score": 1.0
+    },
+    {
+      "label": "invokes",
+      "confidence": 0.9,
+      "source_file": "",
+      "source": "entity:curl-endpoint-send-payment-reminders",
+      "target": "function:send-payment-reminders",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": [],
+  "built_at_commit": "fd659146558fae771ecd2559542d4b8be55adabd"
+}
