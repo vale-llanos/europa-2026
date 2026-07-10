@@ -1670,24 +1670,41 @@ let isAdmin = false;
 // Initialize auth
 async function initAuth() {
   const { data: { user } } = await sb.auth.getUser();
+  console.log('[AUTH] getUser:', user?.email, user?.id);
   if (user) {
     currentUser = user;
-    const { data: profile } = await sb.from('profiles').select('is_admin').eq('id', user.id).single();
-    isAdmin = profile?.is_admin ?? false;
+    try {
+      const { data: profile, error: profileError } = await sb.from('profiles').select('is_admin').eq('id', user.id).single();
+      console.log('[AUTH] profile lookup:', { profile, profileError, userId: user.id });
+      isAdmin = profile?.is_admin ?? false;
+    } catch (err) {
+      console.error('[AUTH] profile fetch error:', err);
+      isAdmin = false;
+    }
     updateAuthUI();
+  } else {
+    console.log('[AUTH] No user found');
   }
 }
 
 // Listen for auth changes
 sb.auth.onAuthStateChange(async (event, session) => {
+  console.log('[AUTH STATE CHANGE]', event, session?.user?.email);
   if (session?.user) {
     currentUser = session.user;
-    const { data: profile } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).single();
-    isAdmin = profile?.is_admin ?? false;
+    try {
+      const { data: profile, error: profileError } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).single();
+      console.log('[AUTH STATE] profile lookup:', { profile, profileError });
+      isAdmin = profile?.is_admin ?? false;
+    } catch (err) {
+      console.error('[AUTH STATE] profile fetch error:', err);
+      isAdmin = false;
+    }
   } else {
     currentUser = null;
     isAdmin = false;
   }
+  console.log('[AUTH STATE] Final state:', { currentUser: currentUser?.email, isAdmin });
   updateAuthUI();
 });
 
@@ -1741,6 +1758,10 @@ async function handleLogin(e) {
   errorDiv.style.display = 'none';
   
   try {
+    console.log('[LOGIN] Attempting login for:', email);
+    let user = null;
+    let isNewUser = false;
+    
     // Try to sign up first (in case user doesn't exist)
     const { data: signUpData, error: signUpError } = await sb.auth.signUp({
       email,
@@ -1748,27 +1769,56 @@ async function handleLogin(e) {
       options: { data: { full_name: email } }
     });
     
+    console.log('[LOGIN] signUp result:', { error: signUpError?.message, userId: signUpData?.user?.id });
+    
     // If sign up fails (user already exists), try to sign in
     if (signUpError && signUpError.message.includes('already registered')) {
+      console.log('[LOGIN] User exists, trying signIn');
       const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({
         email,
         password
       });
+      
+      console.log('[LOGIN] signIn result:', { error: signInError?.message, userId: signInData?.user?.id });
       
       if (signInError) {
         errorDiv.textContent = '❌ ' + (signInError.message.includes('Invalid') ? 'Email o contraseña incorrectos' : signInError.message);
         errorDiv.style.display = 'block';
         return;
       }
+      user = signInData.user;
     } else if (signUpError) {
       errorDiv.textContent = '❌ ' + signUpError.message;
       errorDiv.style.display = 'block';
       return;
+    } else {
+      console.log('[LOGIN] New user created');
+      user = signUpData.user;
+      isNewUser = true;
     }
+    
+    // If new user, create profile entry
+    if (isNewUser && user) {
+      console.log('[LOGIN] Creating profile for new user:', user.id, user.email);
+      const { data: insertData, error: profileError } = await sb.from('profiles').insert({
+        id: user.id,
+        email: user.email,
+        full_name: email,
+        is_admin: false
+      }).select().single();
+      
+      console.log('[LOGIN] Profile creation result:', { insertData, profileError: profileError?.message });
+    }
+    
+    // Wait a moment for auth state to update, then refresh auth state
+    console.log('[LOGIN] Waiting for auth state to update...');
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await initAuth();
     
     closeLoginModal();
     alert('✅ ¡Bienvenido! Te hemos iniciado sesión');
   } catch (err) {
+    console.error('[LOGIN] Error:', err);
     errorDiv.textContent = '❌ ' + err.message;
     errorDiv.style.display = 'block';
   }
@@ -2934,6 +2984,8 @@ function getPagosViewData() {
 }
 
 async function togglePagoCuota(pagoId) {
+  if (!checkAdminPermission()) return;
+  
   const pago = pagosData.pagos.find(p => p.id === pagoId);
   if (!pago) return;
   const newPagado      = !pago.pagado;
