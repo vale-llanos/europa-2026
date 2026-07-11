@@ -3225,9 +3225,6 @@ async function renderFinDashboard() {
       { label:'Día a día (€)',      data: comp.map(c => c.daily),      color:'#f7c948' },
       { label:'Reservas (≈€)',      data: comp.map(c => c.reservaEur), color:'#5db8ff' },
     ]);
-  // Reservation-cost side of the composition chart needs the live exchange
-  // rate; redraw once it's loaded (harmless no-op if it already was).
-  ensureExchangeRate().then(() => { if (currentView === 'finanzas' && finSubView === 'findash') renderFinDashboard(); });
 }
 
 function aggregateBy(items, keyFn, valueFn) {
