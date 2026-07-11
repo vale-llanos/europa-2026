@@ -1455,8 +1455,13 @@
         </div>
         <button class="filter-btn" id="finClear" style="margin-left:auto;">✕ Limpiar</button>
       </div>
+      <div class="kpi-grid" id="finActionKpis" style="margin-bottom:14px;"></div>
       <div class="kpi-grid" id="finKpis" style="margin-bottom:22px;"></div>
       <div class="chart-grid">
+        <div class="chart-card">
+          <h3>✅ Pagado vs Pendiente</h3>
+          <div class="chart-box"><div id="finPaidMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finPaidCanvas"></canvas></div>
+        </div>
         <div class="chart-card">
           <h3>🏙️ Gasto por ciudad</h3>
           <div class="chart-box"><div id="finCityMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finCityCanvas"></canvas></div>
@@ -1468,10 +1473,6 @@
         <div class="chart-card">
           <h3>👤 Gasto por persona (quién paga)</h3>
           <div class="chart-box"><div id="finPersMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finPersCanvas"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h3>✅ Pagado vs Pendiente</h3>
-          <div class="chart-box"><div id="finPaidMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finPaidCanvas"></canvas></div>
         </div>
       </div>
     </div>
@@ -2841,9 +2842,9 @@ function nextActivity() {
   // first match is already the next one.
   return DATA.records.find(r => { const iso = fechaToISO(r.fecha); return iso && iso >= todayISO; }) || null;
 }
-function nextPaymentDue() {
+function nextPaymentDue(compraIds = null) {
   const unpaid = pagosData.pagos
-    .filter(p => !p.pagado)
+    .filter(p => !p.pagado && (!compraIds || compraIds.has(p.compra_id)))
     .sort((a,b) => String(a.fecha_pago||'').localeCompare(String(b.fecha_pago||'')));
   if (!unpaid.length) return null;
   const pago    = unpaid[0];
@@ -3133,10 +3134,37 @@ async function renderFinDashboard() {
   const confirmed = fins.filter(({fin})=>fin.payStatus==='paid').length;
   const pendingCount = recs.length - confirmed;
 
+  // ── Actionable-first row: what needs attention, before any historical chart ──
+  const compraIds = new Set(fins.flatMap(({fin}) => fin.compras.map(c => c.id)));
+  const remainingInstallments = fins.reduce((s,{fin}) => s + fin.compras.reduce((s2,c) => {
+    const cf = compraFinancials(c.id);
+    return s2 + Math.max(0, cf.cuotasTotales - cf.cuotasPagadas);
+  }, 0), 0);
+  const due = nextPaymentDue(compraIds);
+
+  const actionKpis = [];
+  if (due) {
+    const name  = due.reserva?.nombre || due.compra?.descripcion || 'Pago';
+    const color = due.daysUntil < 0 ? '#ef4444' : due.daysUntil <= 5 ? 'var(--work)' : 'var(--vacation)';
+    const label = due.daysUntil < 0 ? 'Vencido' : due.daysUntil === 0 ? 'Vence hoy' : `Vence en ${due.daysUntil} días`;
+    actionKpis.push({ label:'Próximo pago', value: formatCop(due.pago.valor_cuota), sub: `${name} · ${label}`, color });
+  } else {
+    actionKpis.push({ label:'Próximo pago', value:'Sin pagos pendientes 🎉', color:'var(--vacation)' });
+  }
+  actionKpis.push({ label:'Saldo pendiente',   value: formatCop(pend), color:'var(--work)' });
+  actionKpis.push({ label:'Total pagado',      value: formatCop(paid), color:'var(--vacation)' });
+  actionKpis.push({ label:'Cuotas restantes',  value: remainingInstallments, color:'var(--accent)' });
+
+  document.getElementById('finActionKpis').innerHTML = actionKpis.map(k => `
+    <div class="kpi-card" style="--accent-bar:${k.color};">
+      <span class="kpi-label">${k.label}</span>
+      <span class="kpi-value" style="color:${k.color};">${k.value}</span>
+      ${k.sub ? `<span style="font-size:0.75rem;color:var(--text-dim);">${k.sub}</span>` : ''}
+    </div>`).join('');
+
+  // ── Secondary totals row ──────────────────────────────────────────────────
   const kpis = [
     { label:'Gasto total',          value:formatCop(total), color:'var(--accent)' },
-    { label:'Gasto pagado',         value:formatCop(paid),  color:'var(--vacation)' },
-    { label:'Gasto pendiente',      value:formatCop(pend),  color:'var(--work)' },
     { label:'Reservas confirmadas', value:confirmed,        color:'var(--vacation)' },
     { label:'Reservas pendientes',  value:pendingCount,     color:'var(--work)' },
   ];
