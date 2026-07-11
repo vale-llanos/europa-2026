@@ -1312,6 +1312,33 @@
     .assistant-panel { right: 8px; left: 8px; width: auto; bottom: 80px; max-height: 75vh; }
     .assistant-fab { right: 16px; bottom: 16px; }
   }
+
+  /* === TRIP HEALTH (detail page) === */
+  .health-score-badge { text-align: center; flex-shrink: 0; min-width: 110px; }
+  .health-emoji { font-size: 1.8rem; line-height: 1; }
+  .health-score-num { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+  .health-score-label { font-size: 0.78rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
+  .health-hero { display: flex; align-items: center; gap: 20px; margin-bottom: 26px; }
+  .health-hero .health-score-num { font-size: 3rem; }
+  .health-category-section { margin-bottom: 22px; }
+  .health-category-title { font-size: 1rem; font-weight: 800; margin-bottom: 10px; }
+  .health-issue-card {
+    background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .health-issue-card.red    { border-left-color: #ef4444; }
+  .health-issue-card.yellow { border-left-color: var(--work); }
+  .health-issue-card .hi-title { font-weight: 700; font-size: 0.9rem; }
+  .health-issue-card .hi-detail { font-size: 0.8rem; color: var(--text-dim); margin-top: 2px; }
+  .health-issue-card .hi-icon { margin-right: 8px; }
+  .health-empty-category { color: var(--vacation); font-size: 0.85rem; font-style: italic; }
+  .health-prep-list { display: flex; flex-direction: column; gap: 8px; opacity: 0.6; }
+  .health-prep-item {
+    background: var(--surface-2); border: 1px dashed var(--border); border-radius: 10px;
+    padding: 10px 14px; font-size: 0.85rem; display: flex; align-items: center; gap: 10px;
+  }
+  .health-prep-item .prep-soon { margin-left: auto; font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; }
 </style>
 </head>
 <body>
@@ -1341,6 +1368,7 @@
   <button class="drawer-item active" data-nav="dashboard"><span class="di-icon">🏠</span> Home</button>
   <button class="drawer-item" data-nav="itinerario"><span class="di-icon">🗺️</span> Itinerario</button>
   <button class="drawer-item" data-nav="finanzas"><span class="di-icon">💶</span> Finanzas</button>
+  <button class="drawer-item" data-nav="health"><span class="di-icon">🩺</span> Trip Health</button>
   <div class="drawer-foot">
     <div style="padding:10px 14px;font-size:0.8rem;color:var(--text-dim);margin-bottom:8px;">
       <div id="editModeStatus" style="font-weight:600;margin-bottom:4px;">👁️ View Mode</div>
@@ -1595,6 +1623,24 @@
   <!-- /fin-pagos -->
   </div>
   <!-- /view-finanzas -->
+
+  <!-- TRIP HEALTH DETAIL PAGE -->
+  <div id="view-health" class="hidden">
+    <div class="section-title">🩺 Trip Health</div>
+    <div class="health-hero" id="healthHero"></div>
+    <div id="healthCategories"></div>
+    <div class="health-category-section">
+      <div class="health-category-title">🧳 Preparación de viaje <span style="font-weight:500;color:var(--text-dim);font-size:0.8rem;">— próximamente</span></div>
+      <div class="health-prep-list">
+        <div class="health-prep-item">🛂 Pasaporte <span class="prep-soon">Próximamente</span></div>
+        <div class="health-prep-item">🛃 Visa <span class="prep-soon">Próximamente</span></div>
+        <div class="health-prep-item">🏥 Seguro de viaje <span class="prep-soon">Próximamente</span></div>
+        <div class="health-prep-item">📶 eSIM <span class="prep-soon">Próximamente</span></div>
+        <div class="health-prep-item">🎫 Pases de abordar <span class="prep-soon">Próximamente</span></div>
+        <div class="health-prep-item">💉 Requisitos de vacunación <span class="prep-soon">Próximamente</span></div>
+      </div>
+    </div>
+  </div>
 
   <!-- CITY DETAIL VIEW -->
   <div id="view-city-detail" class="hidden">
@@ -2985,6 +3031,189 @@ function nextPaymentDue(compraIds = null) {
   return { pago, compra, reserva, daysUntil: Math.round((due - today) / 86400000) };
 }
 
+// ── Trip Health ──────────────────────────────────────────────────────────────
+// Pure client-side rules engine over data already loaded (DATA.records/
+// DATA.reservations/pagosData) — no server round-trip, so it recomputes
+// instantly whenever the Home dashboard or the Health page is rendered.
+// Weights are plain constants, not a black box — easy to retune later.
+const HEALTH_WEIGHTS = { red: 10, yellow: 3 };
+
+function parseHorarioRange(h) {
+  const m = /^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/.exec(h || '');
+  if (!m) return null;
+  return [Number(m[1]) * 60 + Number(m[2]), Number(m[3]) * 60 + Number(m[4])];
+}
+
+function computeTripHealth() {
+  const issues = [];    // { category, severity: 'red'|'yellow', title, detail, action }
+  const positives = []; // plain strings, shown when a check finds nothing wrong
+  const addIssue = (category, severity, title, detail, action) => issues.push({ category, severity, title, detail, action });
+
+  // ── Reservations ────────────────────────────────────────────────────────
+  const missingConfirm = DATA.reservations.filter(r => !r.confirmacion);
+  missingConfirm.forEach(r => addIssue('Reservas', 'yellow', r.nombre, 'Falta el número de confirmación', { view:'city-detail', ciudad:r.ciudad }));
+  const missingLink = DATA.reservations.filter(r => !r.link);
+  missingLink.forEach(r => addIssue('Reservas', 'yellow', r.nombre, 'Falta el enlace de la reserva', { view:'city-detail', ciudad:r.ciudad }));
+  const missingCheckin = DATA.reservations.filter(r => (r.tipo||'Alojamiento') === 'Alojamiento' && !r.checkin);
+  missingCheckin.forEach(r => addIssue('Reservas', 'yellow', r.nombre, 'Falta la hora de check-in', { view:'city-detail', ciudad:r.ciudad }));
+  const dupGroups = {};
+  DATA.reservations.forEach(r => {
+    const key = `${(r.nombre||'').trim().toLowerCase()}|${r.ciudad}|${r.fecha}`;
+    (dupGroups[key] = dupGroups[key] || []).push(r);
+  });
+  Object.values(dupGroups).filter(g => g.length > 1).forEach(g => {
+    addIssue('Reservas', 'yellow', g[0].nombre, `Hay ${g.length} reservas iguales para ${g[0].ciudad} el ${g[0].fecha}`, { view:'city-detail', ciudad:g[0].ciudad });
+  });
+  if (!missingConfirm.length && !missingCheckin.length && DATA.reservations.length) positives.push('Todas las reservas tienen confirmación y check-in');
+
+  // ── Payments (reservaFinancials/compraFinancials — same single source of
+  // truth every other financial widget in the app already reads) ──────────
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in5 = new Date(today); in5.setDate(in5.getDate() + 5);
+  const overdue = pagosData.pagos.filter(p => !p.pagado && p.fecha_pago && new Date(p.fecha_pago+'T00:00:00') < today);
+  const dueSoon = pagosData.pagos.filter(p => !p.pagado && p.fecha_pago && new Date(p.fecha_pago+'T00:00:00') >= today && new Date(p.fecha_pago+'T00:00:00') <= in5);
+  const describePago = (p) => {
+    const compra  = pagosData.compras.find(c => c.id === p.compra_id);
+    const reserva = compra ? DATA.reservations.find(r => String(r.id) === String(compra.reserva_id)) : null;
+    return { name: reserva?.nombre || compra?.descripcion || 'Pago', action: { view:'pagos', compraId: compra?.id } };
+  };
+  overdue.forEach(p => { const { name, action } = describePago(p); addIssue('Pagos', 'red', name, `Cuota vencida (${p.fecha_pago})`, action); });
+  dueSoon.forEach(p => { const { name, action } = describePago(p); addIssue('Pagos', 'yellow', name, `Cuota vence el ${p.fecha_pago}`, action); });
+  const tf = tripFinancials();
+  if (tf.total > 0) positives.push(`${Math.round((tf.paid/tf.total)*100)}% del viaje pagado`);
+  if (!overdue.length) positives.push('Sin cuotas vencidas');
+
+  // ── Itinerary ─────────────────────────────────────────────────────────────
+  const { startISO, endISO } = tripDateRange();
+  const byDate = {};
+  DATA.records.forEach(r => {
+    const iso = r.fecha_date || fechaToISO(r.fecha);
+    if (iso) (byDate[iso] = byDate[iso] || []).push(r);
+  });
+
+  if (startISO && endISO) {
+    const emptyDays = [];
+    for (let d = new Date(startISO+'T00:00:00'), end = new Date(endISO+'T00:00:00'); d <= end; d.setDate(d.getDate()+1)) {
+      const iso = d.toISOString().slice(0,10);
+      if (!byDate[iso]) emptyDays.push(iso);
+    }
+    emptyDays.forEach(iso => addIssue('Itinerario', 'yellow', 'Día sin planear', `No hay actividades para el ${iso}`, { view:'itinerario' }));
+    if (!emptyDays.length) positives.push('Todos los días del viaje tienen actividades planeadas');
+  }
+
+  let overlapFound = false;
+  Object.entries(byDate).forEach(([iso, acts]) => {
+    for (let i = 0; i < acts.length; i++) {
+      const ri = parseHorarioRange(acts[i].horario);
+      if (!ri) continue;
+      for (let j = i + 1; j < acts.length; j++) {
+        const rj = parseHorarioRange(acts[j].horario);
+        if (!rj) continue;
+        const gap = ri[1] <= rj[0] ? rj[0]-ri[1] : rj[1] <= ri[0] ? ri[0]-rj[1] : -1;
+        const typeI = classifyCategory(acts[i].categoria), typeJ = classifyCategory(acts[j].categoria);
+        const isTransport = typeI === 'transport' || typeJ === 'transport';
+        const isWorkTransportPair = (typeI==='work' && typeJ==='transport') || (typeI==='transport' && typeJ==='work');
+
+        if (gap < 0 && isWorkTransportPair) {
+          addIssue('Trabajo remoto', 'red', `${acts[i].actividad} / ${acts[j].actividad}`, `${iso}: un bloque de trabajo se cruza con transporte`, { view:'itinerario' });
+        } else if (gap < 30 && acts[i].ciudad !== acts[j].ciudad) {
+          addIssue('Itinerario', isTransport ? 'red' : 'yellow', `${acts[i].actividad} / ${acts[j].actividad}`, `${iso}: menos de 30 min entre actividades en distinta ciudad`, { view:'itinerario' });
+          overlapFound = true;
+        } else if (gap >= 0 && gap < 60 && isTransport && acts[i].ciudad === acts[j].ciudad) {
+          addIssue('Itinerario', 'yellow', `${acts[i].actividad} → ${acts[j].actividad}`, `${iso}: menos de 1 hora entre el transporte y la siguiente actividad`, { view:'itinerario' });
+        }
+      }
+    }
+  });
+  if (!overlapFound) positives.push('Sin actividades encimadas entre ciudades');
+
+  if (startISO && endISO) {
+    const perDayCount = {}, perDayVacation = {};
+    DATA.records.forEach(r => {
+      const iso = r.fecha_date || fechaToISO(r.fecha);
+      if (!iso) return;
+      perDayCount[iso] = (perDayCount[iso]||0) + 1;
+      if (r.es_vacaciones) perDayVacation[iso] = true;
+    });
+    let streak = 0, streakStart = null;
+    for (let d = new Date(startISO+'T00:00:00'), end = new Date(endISO+'T00:00:00'); d <= end; d.setDate(d.getDate()+1)) {
+      const iso = d.toISOString().slice(0,10);
+      const low = (perDayCount[iso]||0) <= 1 && !perDayVacation[iso];
+      if (low) { if (!streak) streakStart = iso; streak++; }
+      else {
+        if (streak >= 3) addIssue('Itinerario', 'yellow', 'Varios días con poco planeado', `${streak} días seguidos desde ${streakStart} con poca o ninguna actividad`, { view:'itinerario' });
+        streak = 0;
+      }
+    }
+    if (streak >= 3) addIssue('Itinerario', 'yellow', 'Varios días con poco planeado', `${streak} días seguidos desde ${streakStart} con poca o ninguna actividad`, { view:'itinerario' });
+  }
+
+  // ── Budget ────────────────────────────────────────────────────────────────
+  const byCity = {};
+  DATA.reservations.forEach(r => { byCity[r.ciudad] = (byCity[r.ciudad]||0) + reservaFinancials(r.id).total; });
+  const totalSpend = Object.values(byCity).reduce((s,v)=>s+v,0);
+  const topCity = Object.entries(byCity).sort((a,b)=>b[1]-a[1])[0];
+  if (topCity && totalSpend > 0) {
+    const pct = Math.round((topCity[1]/totalSpend)*100);
+    if (pct >= 35) addIssue('Presupuesto', 'yellow', `${pct}% del gasto en ${topCity[0]}`, 'La mayoría del presupuesto está concentrado en una sola ciudad', { view:'finanzas', sub:'findash' });
+  }
+  const noCost = DATA.reservations.filter(r => reservaFinancials(r.id).payStatus === 'none');
+  noCost.forEach(r => addIssue('Presupuesto', 'yellow', r.nombre, 'No tiene ningún costo registrado todavía', { view:'city-detail', ciudad:r.ciudad }));
+  if (!noCost.length && DATA.reservations.length) positives.push('Todas las reservas tienen un costo registrado');
+
+  // ── Score & status ──────────────────────────────────────────────────────
+  const redCount = issues.filter(i => i.severity === 'red').length;
+  const yellowCount = issues.filter(i => i.severity === 'yellow').length;
+  const score = Math.max(0, Math.min(100, 100 - redCount*HEALTH_WEIGHTS.red - yellowCount*HEALTH_WEIGHTS.yellow));
+  let status, statusEmoji, statusLabel;
+  if (score < 70 || redCount > 0)      { status = 'red';    statusEmoji = '🔴'; statusLabel = 'Requiere atención'; }
+  else if (score < 90)                 { status = 'yellow'; statusEmoji = '🟡'; statusLabel = 'Casi listo'; }
+  else                                 { status = 'green';  statusEmoji = '🟢'; statusLabel = 'Trip Ready'; }
+
+  issues.sort((a,b) => (a.severity === 'red' ? 0 : 1) - (b.severity === 'red' ? 0 : 1));
+  return { score, status, statusEmoji, statusLabel, issues, positives };
+}
+
+const HEALTH_CATEGORY_ICONS = { 'Reservas':'🎫', 'Pagos':'💳', 'Itinerario':'🗺️', 'Presupuesto':'💶', 'Trabajo remoto':'💻' };
+const HEALTH_CATEGORIES = ['Reservas', 'Pagos', 'Itinerario', 'Presupuesto', 'Trabajo remoto'];
+
+function renderTripHealthPage() {
+  const hero = document.getElementById('healthHero');
+  const catsEl = document.getElementById('healthCategories');
+  if (!hero || !catsEl) return;
+  const health = computeTripHealth();
+
+  hero.innerHTML = `
+    <div class="health-score-badge">
+      <div class="health-emoji">${health.statusEmoji}</div>
+      <div class="health-score-num">${health.score}%</div>
+      <div class="health-score-label">${health.statusLabel}</div>
+    </div>
+    <div>
+      <div style="font-weight:700;font-size:1.1rem;">${health.issues.length ? `${health.issues.length} cosa${health.issues.length===1?'':'s'} por revisar antes del viaje` : '¡Todo listo para viajar!'}</div>
+      ${health.positives.length ? `<div style="color:var(--text-dim);font-size:0.85rem;margin-top:4px;">${health.positives.join(' · ')}</div>` : ''}
+    </div>`;
+
+  catsEl.innerHTML = HEALTH_CATEGORIES.map(cat => {
+    const items = health.issues.filter(i => i.category === cat);
+    const body = items.length
+      ? items.map((it, i) => `
+        <div class="health-issue-card ${it.severity}" data-cat="${cat}" data-idx="${i}">
+          <div><span class="hi-icon">${it.severity==='red'?'🔴':'⚠️'}</span><span class="hi-title">${it.title}</span><div class="hi-detail">${it.detail}</div></div>
+          ${it.action ? `<button class="btn-secondary health-open-btn">Abrir →</button>` : ''}
+        </div>`).join('')
+      : `<p class="health-empty-category">✓ Sin problemas en esta categoría.</p>`;
+    return `<div class="health-category-section"><div class="health-category-title">${HEALTH_CATEGORY_ICONS[cat]||''} ${cat}</div>${body}</div>`;
+  }).join('');
+
+  catsEl.querySelectorAll('.health-issue-card').forEach(card => {
+    const cat = card.dataset.cat, idx = Number(card.dataset.idx);
+    const item = health.issues.filter(i => i.category === cat)[idx];
+    const btn = card.querySelector('.health-open-btn');
+    if (btn && item?.action) btn.onclick = () => runNavAction(item.action);
+  });
+}
+
 function renderDashTripHeader() {
   const el = document.getElementById('dashTripHeader');
   const s  = tripStats();
@@ -4299,7 +4528,8 @@ function renderPagosCompraList() {
 const NAV_FOR_VIEW = {
   dashboard: 'dashboard',
   home: 'itinerario', timeline: 'itinerario', 'city-detail': 'itinerario',
-  finanzas: 'finanzas'
+  finanzas: 'finanzas',
+  health: 'health'
 };
 let finSubView = 'findash';
 
@@ -4321,7 +4551,7 @@ function switchView(view) {
     if (cronoMap) { cronoMap.remove(); cronoMap = null; }
   }
   currentView = view;
-  ['dashboard','home','finanzas','city-detail'].forEach(v => {
+  ['dashboard','home','finanzas','health','city-detail'].forEach(v => {
     document.getElementById(`view-${v}`).classList.toggle('hidden', v !== view);
   });
   if (view === 'dashboard') {
@@ -4333,6 +4563,9 @@ function switchView(view) {
     switchItinSub(itinSubView);
   } else if (view === 'finanzas') {
     switchFinSub(finSubView);
+  } else if (view === 'health') {
+    renderTripHealthPage();
+    ensurePagosData().then(() => { if (currentView === 'health') renderTripHealthPage(); });
   }
   updateDrawerActive(view);
   // city-detail: content rendered before this call in openCity
@@ -4387,6 +4620,7 @@ function navigate(nav) {
   currentCity = null;
   if (nav === 'itinerario') switchView('home');
   else if (nav === 'finanzas') switchView('finanzas');
+  else if (nav === 'health') switchView('health');
   else switchView('dashboard');
   closeDrawer();
 }
@@ -5157,11 +5391,11 @@ function renderAssistantResponse(data) {
   });
 }
 
-// Dispatches to the app's existing navigation — the assistant never invents
-// new navigation logic, only points at views/functions that already exist.
-function runAssistantAction(action) {
+// Shared navigation dispatcher — reused by the AI assistant and Trip Health,
+// so there's exactly one place that knows how to jump to a reservation,
+// payment, or city instead of two competing implementations.
+function runNavAction(action) {
   if (!action) return;
-  closeAssistant();
   if (action.view === 'city-detail' && action.ciudad) {
     openCity(action.ciudad);
   } else if (action.view === 'pagos') {
@@ -5171,7 +5405,14 @@ function runAssistantAction(action) {
   } else if (action.view === 'finanzas') {
     finSubView = action.sub || 'findash';
     switchView('finanzas');
+  } else if (action.view === 'health') {
+    switchView('health');
   }
+}
+function runAssistantAction(action) {
+  if (!action) return;
+  closeAssistant();
+  runNavAction(action);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
