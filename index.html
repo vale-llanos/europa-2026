@@ -1940,7 +1940,10 @@ function getDayName(iso) {
 }
 function sortRecords() {
   DATA.records.sort((a, b) => {
-    const ia = fechaToISO(a.fecha), ib = fechaToISO(b.fecha);
+    // fecha_date (real DATE column) is canonical; fall back to parsing the
+    // legacy fecha text only for records that somehow predate the backfill.
+    const ia = a.fecha_date || fechaToISO(a.fecha);
+    const ib = b.fecha_date || fechaToISO(b.fecha);
     if (ia !== ib) return ia.localeCompare(ib);
     return String(a.horario || '').localeCompare(String(b.horario || ''));
   });
@@ -2314,7 +2317,7 @@ function renderCityGrid() {
     const dates = [...new Set(items.map(r => r.fecha))];
     const dailyBudget = items.reduce((s,r) => s+(parseFloat(r.presupuesto)||0), 0);
     const workCount = items.filter(r => classifyCategory(r.categoria) === 'work').length;
-    const vacCount  = new Set(items.filter(r => r.vacaciones==='Si').map(r => r.fecha)).size;
+    const vacCount  = new Set(items.filter(r => r.es_vacaciones).map(r => r.fecha)).size;
     const cityReservations = DATA.reservations.filter(r => r.ciudad === city);
     // Real reservation cost (Purchases/Payments) — 0 until pagosData is loaded,
     // corrected by the re-render in switchItinSub's 'ciudades' branch.
@@ -2451,7 +2454,7 @@ function renderCityAccordion(city, cityRecords) {
   cityRecords.forEach(r => {
     if (!groups[r.fecha]) { groups[r.fecha] = { fecha:r.fecha, dia:r.dia, items:[], isVac:false }; order.push(r.fecha); }
     groups[r.fecha].items.push(r);
-    if (r.vacaciones === 'Si') groups[r.fecha].isVac = true;
+    if (r.es_vacaciones) groups[r.fecha].isVac = true;
   });
   if (!order.length) {
     container.innerHTML = '<p style="color:var(--text-dim);font-size:0.85rem;">Sin actividades registradas.</p>';
@@ -2510,7 +2513,7 @@ function renderCityMiniCalendar(city, cityRecords) {
   const cityDates = new Set(), dateIsVac = {}, dateHasWork = {};
   cityRecords.forEach(r => {
     cityDates.add(r.fecha);
-    if (r.vacaciones === 'Si') dateIsVac[r.fecha] = true;
+    if (r.es_vacaciones) dateIsVac[r.fecha] = true;
     if (classifyCategory(r.categoria) === 'work') dateHasWork[r.fecha] = true;
   });
   if (!cityDates.size) return;
@@ -2657,7 +2660,7 @@ function renderTimeline() {
       groups.push(groupMap[r.fecha]);
     }
     groupMap[r.fecha].items.push(r);
-    if (r.vacaciones === 'Si') groupMap[r.fecha].isVacation = true;
+    if (r.es_vacaciones) groupMap[r.fecha].isVacation = true;
   });
   // Vacation day filter (day-level)
   const shown = currentVacFilter === 'all' ? groups
@@ -2754,7 +2757,7 @@ function renderCalendar() {
     dateInTrip[r.fecha] = true;
     if (!dateCitiesList[r.fecha]) dateCitiesList[r.fecha] = [];
     if (!dateCitiesList[r.fecha].includes(r.ciudad)) dateCitiesList[r.fecha].push(r.ciudad);
-    if (r.vacaciones === 'Si') dateIsVac[r.fecha] = true;
+    if (r.es_vacaciones) dateIsVac[r.fecha] = true;
     if (classifyCategory(r.categoria) === 'work') dateHasWork[r.fecha] = true;
     if (classifyCategory(r.categoria) === 'transport') dateHasTransport[r.fecha] = true;
   });
@@ -3102,7 +3105,7 @@ function renderVacacionesList(targetId) {
   const el = document.getElementById(targetId);
   const vacDays = {};
   DATA.records.forEach(r => {
-    if (r.vacaciones==='Si') {
+    if (r.es_vacaciones) {
       if (!vacDays[r.fecha]) vacDays[r.fecha] = { dia:r.dia, ciudades:new Set() };
       vacDays[r.fecha].ciudades.add(r.ciudad);
     }
@@ -4274,11 +4277,11 @@ updateThemeLabel();
 // ── Vacation toggle ───────────────────────────────────────────────────────────
 async function toggleVacationDay(fecha) {
   const day = DATA.records.filter(r => r.fecha === fecha);
-  const wasVac = day.some(r => r.vacaciones === 'Si');
-  const newVal = wasVac ? 'No' : 'Si';
+  const wasVac = day.some(r => r.es_vacaciones);
+  const newVal = !wasVac;
   try {
-    await Promise.all(day.map(r => r.id ? dbUpdateActivity(r.id, {...r, vacaciones:newVal}) : Promise.resolve()));
-    day.forEach(r => { r.vacaciones = newVal; });
+    await Promise.all(day.map(r => r.id ? dbUpdateActivity(r.id, {...r, es_vacaciones:newVal}) : Promise.resolve()));
+    day.forEach(r => { r.es_vacaciones = newVal; });
   } catch(err) {
     alert('Error guardando vacaciones: ' + err.message);
     return;
@@ -4321,7 +4324,7 @@ function openModal({record, index, fecha, dia, ciudad}) {
     ubHint.textContent = 'Si no escribes nada, se usan las coordenadas de la ciudad.';
     ubHint.style.color = 'var(--text-dim)';
   }
-  modalCtx = { id:record?record.id:null, ciudad:record?record.ciudad:ciudad, coords:record?record.coords:null, vacaciones:record?(record.vacaciones||'No'):'No' };
+  modalCtx = { id:record?record.id:null, ciudad:record?record.ciudad:ciudad, coords:record?record.coords:null, esVacaciones:record?!!record.es_vacaciones:false };
   document.getElementById('modalOverlay').classList.remove('hidden');
   setTimeout(() => document.getElementById('fActividad').focus(), 60);
 }
@@ -4333,19 +4336,22 @@ async function saveModal() {
   const fActividad = document.getElementById('fActividad').value.trim();
   if (!fActividad) { document.getElementById('fActividad').focus(); return; }
   const isoDate = document.getElementById('fFecha').value;
+  const categoria = document.getElementById('fCategoria').value;
   const record = {
-    horario:     document.getElementById('fHorario').value.trim(),
-    tiempo:      document.getElementById('fTiempo').value.trim() || '-',
-    actividad:   fActividad,
-    categoria:   document.getElementById('fCategoria').value,
-    transporte:  document.getElementById('fTransporte').value.trim() || '-',
-    presupuesto: parseFloat(document.getElementById('fPresupuesto').value) || 0,
-    fecha:       isoToFecha(isoDate),
-    dia:         getDayName(isoDate),
-    notas:       document.getElementById('fNotas').value.trim(),
-    vacaciones:  modalCtx.vacaciones,
-    ciudad:      document.getElementById('fCiudad').value.trim() || modalCtx.ciudad || '',
-    coords:      modalLocationCoords ?? modalCtx.coords ?? DATA.cityCoords[document.getElementById('fCiudad').value.trim()] ?? null
+    horario:        document.getElementById('fHorario').value.trim(),
+    tiempo:         document.getElementById('fTiempo').value.trim() || '-',
+    actividad:      fActividad,
+    categoria:      categoria,
+    categoria_tipo: classifyCategory(categoria),
+    transporte:     document.getElementById('fTransporte').value.trim() || '-',
+    presupuesto:    parseFloat(document.getElementById('fPresupuesto').value) || 0,
+    fecha:          isoToFecha(isoDate),
+    fecha_date:     isoDate || null,
+    dia:            getDayName(isoDate),
+    notas:          document.getElementById('fNotas').value.trim(),
+    es_vacaciones:  modalCtx.esVacaciones,
+    ciudad:         document.getElementById('fCiudad').value.trim() || modalCtx.ciudad || '',
+    coords:         modalLocationCoords ?? modalCtx.coords ?? DATA.cityCoords[document.getElementById('fCiudad').value.trim()] ?? null
   };
   try {
     if (modalEditIndex !== null) {
