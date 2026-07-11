@@ -1190,6 +1190,66 @@
   .chart-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
   .chart-box { position: relative; height: 280px; }
   .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 20px; }
+
+  /* === HOME DASHBOARD: trip header, bento row, map+timeline preview === */
+  .trip-header {
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 20px 22px; display: flex; align-items: center;
+    justify-content: space-between; gap: 18px; flex-wrap: wrap;
+  }
+  .trip-header .route { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.01em; }
+  .trip-header .route span { color: var(--text-dim); font-weight: 500; }
+  .trip-header .meta { display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap; font-size: 0.83rem; color: var(--text-dim); }
+  .trip-header .meta strong { color: var(--text); font-weight: 700; }
+  .trip-header .countdown { text-align: right; flex-shrink: 0; }
+  .trip-header .countdown .num { font-size: 2.1rem; font-weight: 800; color: var(--accent); line-height: 1; letter-spacing: -0.02em; }
+  .trip-header .countdown .label { font-size: 0.74rem; color: var(--text-dim); font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .bento { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .bento-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .bento-card .bc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .bento-card .bc-head h4 { margin: 0; font-size: 0.78rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .bento-card .bc-empty { color: var(--text-dim); font-size: 0.85rem; font-style: italic; }
+
+  .bc-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 7px; white-space: nowrap; }
+  .bc-pill.soon { background: #f7c94822; color: var(--work); }
+  .bc-pill.ok { background: #46c47c22; color: var(--vacation); }
+  .bc-pill.overdue { background: #ef444422; color: #ef4444; }
+
+  .budget-total { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+  .budget-bar { height: 8px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+  .budget-bar .fill { height: 100%; background: linear-gradient(90deg, var(--vacation), var(--accent)); border-radius: 5px; }
+  .budget-legend { display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--text-dim); }
+  .budget-legend b { font-weight: 700; }
+  .budget-legend .paid b { color: var(--vacation); }
+  .budget-legend .pending b { color: var(--work); }
+
+  .bc-row { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .bc-icon { width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; background: var(--surface-2); }
+  .bc-title { font-weight: 700; font-size: 0.92rem; }
+  .bc-sub { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+  .bc-amount { margin-left: auto; text-align: right; font-weight: 800; font-size: 1rem; flex-shrink: 0; }
+  .bc-amount small { display: block; font-size: 0.7rem; color: var(--text-dim); font-weight: 500; }
+
+  .split-row { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.3fr); gap: 14px; }
+  @media (max-width: 860px) { .split-row { grid-template-columns: 1fr; } }
+  .mini-map-wrap { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); height: 220px; position: relative; }
+  .mini-map-wrap .expand-link { position: absolute; right: 10px; bottom: 10px; z-index: 500; font-size: 0.75rem; font-weight: 700; color: var(--accent); background: var(--surface); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+
+  .tl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; height: 220px; overflow-y: auto; }
+  .tl-day { font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin: 12px 0 8px; }
+  .tl-day:first-child { margin-top: 0; }
+  .tl-item { display: flex; gap: 12px; position: relative; padding-bottom: 14px; cursor: pointer; }
+  .tl-item::before { content: ''; position: absolute; left: 13px; top: 26px; bottom: 0; width: 2px; background: var(--border); }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-item:last-child::before { display: none; }
+  .tl-dot { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; background: var(--surface-2); border: 1px solid var(--border); z-index: 1; }
+  .tl-body { flex: 1; padding-top: 1px; }
+  .tl-time { font-size: 0.7rem; color: var(--text-dim); font-weight: 600; }
+  .tl-name { font-size: 0.87rem; font-weight: 700; margin-top: 1px; }
+  .tl-city { font-size: 0.76rem; color: var(--text-dim); }
+  .tl-empty { color: var(--text-dim); font-size: 0.85rem; font-style: italic; }
 </style>
 </head>
 <body>
@@ -1235,11 +1295,30 @@
 
   <!-- HOME / DASHBOARD -->
   <div id="view-dashboard">
-    <!-- SECTION 1: Resumen rápido -->
+    <!-- TRIP HEADER -->
     <div class="section-block">
-      <div class="section-title">📋 Resumen rápido</div>
-      <div class="kpi-grid" id="dashKpis"></div>
-      <div class="quick-actions" id="dashQuickActions"></div>
+      <div class="trip-header" id="dashTripHeader"></div>
+    </div>
+    <!-- BENTO: budget · next activity · next payment -->
+    <div class="section-block">
+      <div class="section-title">💶 Presupuesto</div>
+      <div class="bento" id="dashBento"></div>
+    </div>
+    <!-- MAP + TIMELINE PREVIEW -->
+    <div class="section-block">
+      <div class="split-row">
+        <div>
+          <div class="section-title">🗺️ Ruta</div>
+          <div class="mini-map-wrap">
+            <div id="dashMiniMap" style="width:100%;height:100%;"></div>
+            <span class="expand-link" id="dashMiniMapExpand">Ver mapa completo →</span>
+          </div>
+        </div>
+        <div>
+          <div class="section-title">📍 Próximos días</div>
+          <div class="tl-card" id="dashTimelinePreview"></div>
+        </div>
+      </div>
     </div>
     <!-- SECTION 2: Financiero -->
     <div class="section-block">
@@ -2657,49 +2736,200 @@ function tripStats() {
   return { cities, days, budget, resConfirmed, resTotal: DATA.reservations.length };
 }
 
-function renderDashKpis() {
-  const s = tripStats();
-  const kpis = [
-    { label:'Total de días',        value:s.days,                          icon:'📆', color:'var(--tourism)' },
-    { label:'Total de ciudades',    value:s.cities,                        icon:'🏙️', color:'var(--transport)' },
-    { label:'Presupuesto estimado', value:'€'+s.budget.toFixed(0),         icon:'💰', color:'var(--accent)' },
-    { label:'Reservas confirmadas', value:`${s.resConfirmed} / ${s.resTotal}`, icon:'✅', color:'var(--vacation)' },
-  ];
-  document.getElementById('dashKpis').innerHTML = kpis.map(k => `
-    <div class="kpi-card" style="--accent-bar:${k.color};">
-      <span class="kpi-icon">${k.icon}</span>
-      <span class="kpi-label">${k.label}</span>
-      <span class="kpi-value" style="color:${k.color};">${k.value}</span>
-    </div>`).join('');
+// ── Home dashboard: trip header, budget/next-activity/next-payment bento,
+// mini map, and a short chronological timeline preview. Everything financial
+// reads from tripFinancials()/nextPaymentDue() (compras/pagos), never from
+// reservas directly — same single-source-of-truth rule as reservaFinancials().
+function tripDateRange() {
+  const isoDates = DATA.records.map(r => fechaToISO(r.fecha)).filter(Boolean).sort();
+  return { startISO: isoDates[0] || null, endISO: isoDates[isoDates.length - 1] || null };
+}
+function tripCountdown() {
+  const { startISO, endISO } = tripDateRange();
+  if (!startISO || !endISO) return { status: 'unknown' };
+  const msPerDay = 86400000;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start  = new Date(startISO + 'T00:00:00');
+  const end    = new Date(endISO   + 'T00:00:00');
+  const totalDays = Math.round((end - start) / msPerDay) + 1;
+  if (today < start) return { status:'upcoming',  daysUntil: Math.round((start - today) / msPerDay), totalDays };
+  if (today > end)   return { status:'completed', totalDays };
+  const todayISO  = today.toISOString().slice(0,10);
+  const todayRecs = DATA.records.filter(r => fechaToISO(r.fecha) === todayISO);
+  const currentCity = todayRecs.find(r => !TRANSIT_MODES.has(r.ciudad))?.ciudad || todayRecs[0]?.ciudad || '';
+  return { status:'ongoing', dayOfTrip: Math.round((today - start) / msPerDay) + 1, totalDays, currentCity };
+}
+function tripFinancials() {
+  const fins  = pagosData.compras.map(c => compraFinancials(c.id));
+  const total = fins.reduce((s,f) => s + f.total, 0);
+  const paid  = fins.reduce((s,f) => s + f.paid,  0);
+  return { total, paid, pending: total - paid };
+}
+function nextActivity() {
+  const todayISO = new Date().toISOString().slice(0,10);
+  // DATA.records is kept sorted chronologically by sortRecords(), so the
+  // first match is already the next one.
+  return DATA.records.find(r => { const iso = fechaToISO(r.fecha); return iso && iso >= todayISO; }) || null;
+}
+function nextPaymentDue() {
+  const unpaid = pagosData.pagos
+    .filter(p => !p.pagado)
+    .sort((a,b) => String(a.fecha_pago||'').localeCompare(String(b.fecha_pago||'')));
+  if (!unpaid.length) return null;
+  const pago    = unpaid[0];
+  const compra  = pagosData.compras.find(c => c.id === pago.compra_id);
+  const reserva = compra ? (DATA.reservations||[]).find(r => String(r.id) === String(compra.reserva_id)) : null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due   = new Date(pago.fecha_pago + 'T00:00:00');
+  return { pago, compra, reserva, daysUntil: Math.round((due - today) / 86400000) };
+}
+
+function renderDashTripHeader() {
+  const el = document.getElementById('dashTripHeader');
+  const s  = tripStats();
+  const { startISO, endISO } = tripDateRange();
+  const cd = tripCountdown();
+  const firstCity = DATA.cityOrder.find(c => !TRANSIT_MODES.has(c)) || '';
+  const lastCity  = [...DATA.cityOrder].reverse().find(c => !TRANSIT_MODES.has(c)) || '';
+
+  let num = '', label = '';
+  if (cd.status === 'upcoming')       { num = cd.daysUntil; label = 'días para el viaje'; }
+  else if (cd.status === 'ongoing')   { num = cd.dayOfTrip;  label = `de ${cd.totalDays} días` + (cd.currentCity ? ` · en ${cd.currentCity}` : ''); }
+  else if (cd.status === 'completed') { num = '✓'; label = 'viaje completado'; }
+
+  el.innerHTML = `
+    <div>
+      <div class="route">${firstCity} <span>→ ${s.cities} ciudades →</span> ${lastCity}</div>
+      <div class="meta">
+        ${startISO ? `<span>📅 <strong>${isoToFecha(startISO)}</strong> → <strong>${isoToFecha(endISO)}</strong></span>` : ''}
+        <span>🏙️ <strong>${s.cities}</strong> ciudades</span>
+        <span>📆 <strong>${cd.totalDays || s.days}</strong> días</span>
+      </div>
+    </div>
+    ${num !== '' ? `<div class="countdown"><div class="num">${num}</div><div class="label">${label}</div></div>` : ''}`;
+}
+
+function renderDashBento() {
+  const el = document.getElementById('dashBento');
+  const fin = tripFinancials();
+  const pct = fin.total > 0 ? Math.min(100, Math.round((fin.paid / fin.total) * 100)) : 0;
+
+  const act = nextActivity();
+  const actHtml = act
+    ? `<div class="bc-row" id="dashNextActRow">
+         <div class="bc-icon">${categoryEmoji(classifyCategory(act.categoria))}</div>
+         <div>
+           <div class="bc-title">${act.actividad}</div>
+           <div class="bc-sub">${act.fecha}${act.horario ? ' · ' + act.horario : ''} · ${act.ciudad}</div>
+         </div>
+       </div>`
+    : `<div class="bc-empty">Sin actividades próximas.</div>`;
+
+  const due = nextPaymentDue();
+  let duePill = '', dueHtml = `<div class="bc-empty">Sin pagos pendientes 🎉</div>`;
+  if (due) {
+    const name = due.reserva?.nombre || due.compra?.descripcion || 'Pago';
+    duePill = due.daysUntil < 0  ? `<span class="bc-pill overdue">Vencido</span>`
+            : due.daysUntil === 0 ? `<span class="bc-pill soon">Vence hoy</span>`
+            : `<span class="bc-pill ${due.daysUntil <= 5 ? 'soon' : 'ok'}">Vence en ${due.daysUntil} días</span>`;
+    dueHtml = `
+      <div class="bc-row" id="dashNextPayRow">
+        <div class="bc-icon" style="background:#f7c94822;">💳</div>
+        <div>
+          <div class="bc-title">${name}</div>
+          <div class="bc-sub">Cuota ${due.pago.numero_cuota} · ${due.pago.fecha_pago}</div>
+        </div>
+        <div class="bc-amount">${formatCop(due.pago.valor_cuota)}</div>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="bento-card">
+      <div class="bc-head"><h4>Presupuesto del viaje</h4></div>
+      <div class="budget-total">${formatCop(fin.total)}</div>
+      <div class="budget-bar"><div class="fill" style="width:${pct}%;"></div></div>
+      <div class="budget-legend">
+        <span class="paid">Pagado <b>${formatCop(fin.paid, {withEur:false})}</b></span>
+        <span class="pending">Pendiente <b>${formatCop(fin.pending, {withEur:false})}</b></span>
+      </div>
+    </div>
+    <div class="bento-card">
+      <div class="bc-head"><h4>Próxima actividad</h4></div>
+      ${actHtml}
+    </div>
+    <div class="bento-card">
+      <div class="bc-head"><h4>Próximo pago</h4>${duePill}</div>
+      ${dueHtml}
+    </div>`;
+
+  document.getElementById('dashNextActRow')?.addEventListener('click', () => navigate('itinerario'));
+  document.getElementById('dashNextPayRow')?.addEventListener('click', () => goToManagePagos(due?.compra?.id ?? null));
+}
+
+function renderDashTimelinePreview() {
+  const el = document.getElementById('dashTimelinePreview');
+  const todayISO = new Date().toISOString().slice(0,10);
+  const upcoming = DATA.records.filter(r => { const iso = fechaToISO(r.fecha); return iso && iso >= todayISO; }).slice(0, 6);
+  if (!upcoming.length) { el.innerHTML = '<p class="tl-empty">No hay actividades próximas.</p>'; return; }
+  let html = '', lastFecha = null;
+  upcoming.forEach(r => {
+    if (r.fecha !== lastFecha) { html += `<div class="tl-day">${r.fecha}${r.dia ? ' · ' + r.dia : ''}</div>`; lastFecha = r.fecha; }
+    html += `
+      <div class="tl-item" data-city="${r.ciudad}">
+        <div class="tl-dot">${categoryEmoji(classifyCategory(r.categoria))}</div>
+        <div class="tl-body">
+          <div class="tl-time">${r.horario || ''}</div>
+          <div class="tl-name">${r.actividad}</div>
+          <div class="tl-city">${r.ciudad}</div>
+        </div>
+      </div>`;
+  });
+  el.innerHTML = html;
+  el.querySelectorAll('.tl-item').forEach(item => { item.onclick = () => openCity(item.dataset.city); });
+}
+
+let dashMiniMap = null;
+function renderDashMiniMap() {
+  const el = document.getElementById('dashMiniMap');
+  if (!el || currentView !== 'dashboard') return;
+  if (dashMiniMap) { dashMiniMap.remove(); dashMiniMap = null; }
+  dashMiniMap = L.map('dashMiniMap', { scrollWheelZoom:false, zoomControl:false }).setView([46,5], 4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+  }).addTo(dashMiniMap);
+  const path = [];
+  DATA.cityOrder.forEach((city, idx) => {
+    const coords = DATA.cityCoords[city];
+    if (!coords) return;
+    path.push(coords);
+    L.marker(coords, {
+      icon: L.divIcon({
+        className: 'city-marker',
+        html: `<div style="background:#ff7849;color:white;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.65rem;border:2px solid #0f1419;box-shadow:0 2px 6px rgba(0,0,0,0.5);">${idx+1}</div>`,
+        iconSize:[20,20], iconAnchor:[10,10]
+      })
+    }).addTo(dashMiniMap).on('click', () => openCity(city));
+  });
+  if (path.length > 1) L.polyline(path, { color:'#ff7849', weight:2, opacity:0.6, dashArray:'6,8' }).addTo(dashMiniMap);
+  if (path.length) dashMiniMap.fitBounds(path, { padding:[20,20] });
 }
 
 function renderDashboard() {
-  renderDashKpis();
-
-  const actions = [
-    { label:'🗺️ Ver itinerario',    cls:'primary', act:() => switchView('home') },
-    { label:'🎫 Ver reservas',      cls:'',        act:() => { finSubView='reservations'; switchView('finanzas'); } },
-    { label:'💳 Ver pagos',         cls:'',        act:() => { finSubView='pagos'; switchView('finanzas'); } },
-    { label:'✏️ Editar itinerario', cls:'',        act:() => switchView('timeline') },
-  ];
-  const qa = document.getElementById('dashQuickActions');
-  qa.innerHTML = '';
-  actions.forEach(a => {
-    const b = document.createElement('button');
-    b.className = 'quick-action' + (a.cls ? ' ' + a.cls : '');
-    b.textContent = a.label;
-    b.onclick = a.act;
-    qa.appendChild(b);
-  });
+  renderDashTripHeader();
+  renderDashBento();
+  renderDashTimelinePreview();
+  setTimeout(renderDashMiniMap, 80);
+  const expandBtn = document.getElementById('dashMiniMapExpand');
+  if (expandBtn) expandBtn.onclick = () => navigate('itinerario');
 
   renderGastosPorCiudad('dashGastosCiudad');
   renderResumenReservas('dashResumenReservas');
   renderVacacionesList('dashVacationList');
   renderTrabajoList('dashWorkList');
-  // Reservas confirmadas KPI + resumen need compras/pagos loaded to be accurate.
+  // Budget/next-payment/resumen need compras/pagos loaded to be accurate.
   ensurePagosData().then(() => {
     if (currentView !== 'dashboard') return;
-    renderDashKpis();
+    renderDashBento();
     renderResumenReservas('dashResumenReservas');
     renderDashMonthlyChart();
   });
@@ -3651,6 +3881,9 @@ function updateDrawerActive(view) {
 function switchView(view) {
   if (currentView === 'city-detail' && view !== 'city-detail') {
     if (cityDetailMap) { cityDetailMap.remove(); cityDetailMap = null; }
+  }
+  if (currentView === 'dashboard' && view !== 'dashboard') {
+    if (dashMiniMap) { dashMiniMap.remove(); dashMiniMap = null; }
   }
   currentView = view;
   ['dashboard','home','timeline','finanzas','city-detail'].forEach(v => {
