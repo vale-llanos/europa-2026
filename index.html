@@ -1477,6 +1477,20 @@
           <h3>👤 Gasto por persona (quién paga)</h3>
           <div class="chart-box"><div id="finPersMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finPersCanvas"></canvas></div>
         </div>
+        <div class="chart-card">
+          <h3>🤝 Gasto por participante (reparto)</h3>
+          <p class="section-sub" style="margin:-8px 0 12px;">Costo atribuido a cada persona según cómo se reparte cada compra — distinto de "quién paga", que muestra quién puso el dinero.</p>
+          <div class="chart-box"><div id="finPartMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finPartCanvas"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>🧭 Composición del presupuesto</h3>
+          <p class="section-sub" style="margin:-8px 0 12px;">Día a día (comida, taxis) vs. reservas (hoteles, transporte, actividades) por ciudad — dos categorías separadas del gasto total, no un plan vs. real.</p>
+          <div class="chart-box"><div id="finBudgetCompMsg" style="display:none;color:var(--text-dim);font-style:italic;text-align:center;padding:40px 0;"></div><canvas id="finBudgetCompCanvas"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>📅 Próximos pagos</h3>
+          <div id="finUpcomingPayments"></div>
+        </div>
       </div>
     </div>
 
@@ -3201,6 +3215,19 @@ async function renderFinDashboard() {
   finCharts.cat  = finBarChart('finCatCanvas','finCatMsg',   finCharts.cat,  aggregateBy(fins, ({r})=>r.tipo||'Alojamiento',    ({fin})=>fin.total), '#b388ff');
   finCharts.pers = finBarChart('finPersCanvas','finPersMsg', finCharts.pers, aggregateBy(fins, ({fin})=>fin.paidByName||'Sin asignar', ({fin})=>fin.total), '#ff7849');
   finCharts.paid = finDoughnut('finPaidCanvas','finPaidMsg', finCharts.paid, paid, pend);
+  finCharts.part = finBarChart('finPartCanvas','finPartMsg', finCharts.part, aggregateByParticipant(fins), '#46c47c');
+  renderFinUpcomingPayments(compraIds);
+
+  const comp = budgetCompositionByCity();
+  finCharts.budgetComp = finStackedBarChart('finBudgetCompCanvas', 'finBudgetCompMsg', finCharts.budgetComp,
+    comp.map(c => c.city),
+    [
+      { label:'Día a día (€)',      data: comp.map(c => c.daily),      color:'#f7c948' },
+      { label:'Reservas (≈€)',      data: comp.map(c => c.reservaEur), color:'#5db8ff' },
+    ]);
+  // Reservation-cost side of the composition chart needs the live exchange
+  // rate; redraw once it's loaded (harmless no-op if it already was).
+  ensureExchangeRate().then(() => { if (currentView === 'finanzas' && finSubView === 'findash') renderFinDashboard(); });
 }
 
 function aggregateBy(items, keyFn, valueFn) {
@@ -3208,6 +3235,57 @@ function aggregateBy(items, keyFn, valueFn) {
   const m = {};
   items.forEach(x => { const k = keyFn(x); m[k] = (m[k]||0) + (getValue(x)||0); });
   return Object.entries(m).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
+}
+
+// Cost attributed to each person via how a compra is split among
+// compra_participantes — distinct from "quién paga" (who fronted the money).
+function aggregateByParticipant(fins) {
+  const { participantes, personas } = pagosData;
+  const totals = {};
+  fins.forEach(({fin}) => {
+    fin.compras.forEach(c => {
+      const parts = participantes.filter(p => p.compra_id === c.id);
+      if (!parts.length) return;
+      const share = compraFinancials(c.id).total / parts.length;
+      parts.forEach(p => {
+        const name = personas.find(pe => pe.id === p.persona_id)?.nombre || 'Sin asignar';
+        totals[name] = (totals[name] || 0) + share;
+      });
+    });
+  });
+  return Object.entries(totals).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]);
+}
+
+// Two separate expense categories, not a plan-vs-actual pair: día a día
+// (activities' own presupuesto, €) and reservas (compras/pagos, COP->€).
+function budgetCompositionByCity() {
+  return DATA.cityOrder.map(city => {
+    const items  = DATA.records.filter(r => r.ciudad === city);
+    const daily  = items.reduce((s,r) => s + (parseFloat(r.presupuesto) || 0), 0);
+    const cityReservations = DATA.reservations.filter(r => r.ciudad === city);
+    const reservaCop = cityReservations.reduce((s,r) => s + reservaFinancials(r.id).total, 0);
+    return { city, daily, reservaEur: copToEur(reservaCop) || 0 };
+  }).filter(c => c.daily > 0 || c.reservaEur > 0);
+}
+
+function renderFinUpcomingPayments(compraIds) {
+  const el = document.getElementById('finUpcomingPayments');
+  const upcoming = pagosData.pagos
+    .filter(p => !p.pagado && compraIds.has(p.compra_id))
+    .sort((a,b) => String(a.fecha_pago||'').localeCompare(String(b.fecha_pago||'')))
+    .slice(0, 6);
+  if (!upcoming.length) { el.innerHTML = '<p style="color:var(--text-dim);font-style:italic;">Sin pagos pendientes para este filtro.</p>'; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  el.innerHTML = upcoming.map(p => {
+    const compra  = pagosData.compras.find(c => c.id === p.compra_id);
+    const reserva = compra ? (DATA.reservations||[]).find(r => String(r.id) === String(compra.reserva_id)) : null;
+    const name    = reserva?.nombre || compra?.descripcion || 'Pago';
+    const due       = new Date(p.fecha_pago + 'T00:00:00');
+    const daysUntil = Math.round((due - today) / 86400000);
+    const label = daysUntil < 0 ? `Vencido hace ${-daysUntil}d` : daysUntil === 0 ? 'Vence hoy' : `En ${daysUntil}d`;
+    const color = daysUntil < 0 ? '#ef4444' : daysUntil <= 5 ? 'var(--work)' : 'var(--text-dim)';
+    return `<div class="summary-row"><span class="label">${name} <span style="color:${color};font-size:0.75rem;">· ${label}</span></span><span class="value">${formatCop(p.valor_cuota)}</span></div>`;
+  }).join('');
 }
 
 function finBarChart(canvasId, msgId, prev, entries, color) {
@@ -3239,6 +3317,27 @@ function finDoughnut(canvasId, msgId, prev, paid, pend) {
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:'bottom', labels:{ color:tc.text } },
                 tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: $${ctx.raw.toLocaleString('es-CO')}` } } }
+    }
+  });
+}
+
+function finStackedBarChart(canvasId, msgId, prev, labels, datasets) {
+  const canvas = document.getElementById(canvasId), msg = document.getElementById(msgId);
+  if (prev) { prev.destroy(); prev = null; }
+  if (!labels.length) { canvas.style.display='none'; msg.style.display=''; msg.textContent='Sin datos para este filtro.'; return null; }
+  canvas.style.display=''; msg.style.display='none';
+  const tc = chartTheme();
+  return new Chart(canvas, {
+    type:'bar',
+    data:{ labels, datasets: datasets.map(d => ({
+      label: d.label, data: d.data.map(v => Math.round(v)),
+      backgroundColor: d.color+'aa', borderColor: d.color, borderWidth:1, borderRadius:3
+    })) },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:true, labels:{ color:tc.text } },
+                tooltip:{ callbacks:{ label:ctx=>` ${ctx.dataset.label}: €${Math.round(ctx.raw).toLocaleString('es-ES')}` } } },
+      scales:{ x:{ stacked:true, ticks:{ color:tc.dim, callback:v=>'€'+Math.round(v) }, grid:{ color:tc.grid } },
+               y:{ stacked:true, ticks:{ color:tc.text, font:{size:11} }, grid:{ color:tc.grid } } }
     }
   });
 }
