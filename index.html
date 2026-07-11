@@ -1742,6 +1742,17 @@
   </div>
 </div>
 
+<!-- Drill-down detail for Dashboard Financiero KPI chips / chart bars & slices -->
+<div class="modal-overlay hidden" id="finDetailOverlay">
+  <div class="modal" style="max-width:480px;">
+    <h3>
+      <span id="finDetailTitle"></span>
+      <button class="modal-close" id="finDetailClose">✕</button>
+    </h3>
+    <div id="finDetailContent"></div>
+  </div>
+</div>
+
 <!-- LOGIN MODAL -->
 <div class="modal-overlay hidden" id="loginOverlay">
   <div class="modal" style="max-width:400px;">
@@ -3181,44 +3192,71 @@ async function renderFinDashboard() {
   const compraIds = new Set(fins.flatMap(({fin}) => fin.compras.map(c => c.id)));
   const due = nextPaymentDue(compraIds);
 
+  // Every detail click ultimately shows a list of {label, sub, amount} rows
+  // built from the SAME `fins` this dashboard already computed — no new sums.
+  const showReservas = (title, list, amountFn, totalValue) =>
+    showFinDetail(title, finDetailRows(list, amountFn), formatCop(totalValue, {withEur:false}));
+
   const actionKpis = [];
   if (due) {
     const name  = due.reserva?.nombre || due.compra?.descripcion || 'Pago';
     const color = due.daysUntil < 0 ? '#ef4444' : due.daysUntil <= 5 ? 'var(--work)' : 'var(--vacation)';
     const label = due.daysUntil < 0 ? 'Vencido' : due.daysUntil === 0 ? 'Vence hoy' : `Vence en ${due.daysUntil} días`;
-    actionKpis.push({ label:'Próximo pago', value: formatCop(due.pago.valor_cuota), sub: `${name} · ${label}`, color });
+    actionKpis.push({ label:'Próximo pago', value: formatCop(due.pago.valor_cuota), sub: `${name} · ${label}`, color,
+      onClick: () => renderFinUpcomingPayments(compraIds, { asModal:true }) });
   } else {
-    actionKpis.push({ label:'Próximo pago', value:'Sin pagos pendientes 🎉', color:'var(--vacation)' });
+    actionKpis.push({ label:'Próximo pago', value:'Sin pagos pendientes 🎉', color:'var(--vacation)', onClick:null });
   }
-  actionKpis.push({ label:'Saldo pendiente',   value: formatCop(pend), color:'var(--work)' });
-  actionKpis.push({ label:'Total pagado',      value: formatCop(paid), color:'var(--vacation)' });
+  actionKpis.push({ label:'Saldo pendiente', value: formatCop(pend), color:'var(--work)',
+    onClick: () => showReservas('⏳ Saldo pendiente', fins.filter(x=>x.fin.pending>0), f=>f.pending, pend) });
+  actionKpis.push({ label:'Total pagado', value: formatCop(paid), color:'var(--vacation)',
+    onClick: () => showReservas('✅ Total pagado', fins.filter(x=>x.fin.paid>0), f=>f.paid, paid) });
 
   document.getElementById('finActionKpis').innerHTML = actionKpis.map(k => `
-    <div class="kpi-card" style="--accent-bar:${k.color};">
+    <div class="kpi-card" style="--accent-bar:${k.color};${k.onClick?'cursor:pointer;':''}">
       <span class="kpi-label">${k.label}</span>
       <span class="kpi-value" style="color:${k.color};">${k.value}</span>
       ${k.sub ? `<span style="font-size:0.75rem;color:var(--text-dim);">${k.sub}</span>` : ''}
     </div>`).join('');
+  document.querySelectorAll('#finActionKpis .kpi-card').forEach((el, i) => { el.onclick = actionKpis[i].onClick; });
 
   // ── Secondary totals row ──────────────────────────────────────────────────
   const kpis = [
-    { label:'Gasto total',           value:formatCop(total), color:'var(--accent)' },
-    { label:'Confirmadas (pagadas)', value:confirmed,        color:'var(--vacation)' },
-    { label:'Parcialmente pagadas',  value:partialCount,     color:'var(--work)' },
-    { label:'Sin pagar',             value:unpaidCount,      color:'#ef4444' },
-    { label:'Sin costo registrado',  value:noneCount,        color:'var(--text-dim)' },
+    { label:'Gasto total', value:formatCop(total), color:'var(--accent)',
+      onClick: () => showReservas('💶 Gasto total', fins, f=>f.total, total) },
+    { label:'Confirmadas (pagadas)', value:confirmed, color:'var(--vacation)',
+      onClick: () => showReservas('✅ Confirmadas (pagadas)', fins.filter(x=>x.fin.payStatus==='paid'), f=>f.total, total) },
+    { label:'Parcialmente pagadas', value:partialCount, color:'var(--work)',
+      onClick: () => showReservas('🟡 Parcialmente pagadas', fins.filter(x=>x.fin.payStatus==='partial'), f=>f.total, total) },
+    { label:'Sin pagar', value:unpaidCount, color:'#ef4444',
+      onClick: () => showReservas('❌ Sin pagar', fins.filter(x=>x.fin.payStatus==='unpaid'), f=>f.total, total) },
+    { label:'Sin costo registrado', value:noneCount, color:'var(--text-dim)',
+      onClick: () => showReservas('— Sin costo registrado', fins.filter(x=>x.fin.payStatus==='none'), f=>f.total, total) },
   ];
   document.getElementById('finKpis').innerHTML = kpis.map(k => `
-    <div class="kpi-card" style="--accent-bar:${k.color};">
+    <div class="kpi-card" style="--accent-bar:${k.color};cursor:pointer;">
       <span class="kpi-label">${k.label}</span>
       <span class="kpi-value" style="color:${k.color};">${k.value}</span>
     </div>`).join('');
+  document.querySelectorAll('#finKpis .kpi-card').forEach((el, i) => { el.onclick = kpis[i].onClick; });
 
-  finCharts.city = finBarChart('finCityCanvas','finCityMsg', finCharts.city, aggregateBy(fins, ({r})=>r.ciudad||'—',            ({fin})=>fin.total), '#5db8ff');
-  finCharts.cat  = finBarChart('finCatCanvas','finCatMsg',   finCharts.cat,  aggregateBy(fins, ({r})=>r.tipo||'Alojamiento',    ({fin})=>fin.total), '#b388ff');
-  finCharts.pers = finBarChart('finPersCanvas','finPersMsg', finCharts.pers, aggregateBy(fins, ({fin})=>fin.paidByName||'Sin asignar', ({fin})=>fin.total), '#ff7849');
-  finCharts.paid = finDoughnut('finPaidCanvas','finPaidMsg', finCharts.paid, paid, pend);
-  finCharts.part = finBarChart('finPartCanvas','finPartMsg', finCharts.part, aggregateByParticipant(fins), '#46c47c');
+  const byCityGroup = city => fins.filter(x => (x.r.ciudad||'—') === city);
+  const byCatGroup  = cat  => fins.filter(x => (x.r.tipo||'Alojamiento') === cat);
+  const byPersGroup = name => fins.filter(x => (x.fin.paidByName||'Sin asignar') === name);
+  const groupTotal  = list => list.reduce((s,x) => s + x.fin.total, 0);
+
+  finCharts.city = finBarChart('finCityCanvas','finCityMsg', finCharts.city, aggregateBy(fins, ({r})=>r.ciudad||'—', ({fin})=>fin.total), '#5db8ff',
+    city => { const list = byCityGroup(city); showReservas(`🏙️ Gasto en ${city}`, list, f=>f.total, groupTotal(list)); });
+  finCharts.cat  = finBarChart('finCatCanvas','finCatMsg',   finCharts.cat,  aggregateBy(fins, ({r})=>r.tipo||'Alojamiento', ({fin})=>fin.total), '#b388ff',
+    cat => { const list = byCatGroup(cat); showReservas(`🏷️ Gasto en ${cat}`, list, f=>f.total, groupTotal(list)); });
+  finCharts.pers = finBarChart('finPersCanvas','finPersMsg', finCharts.pers, aggregateBy(fins, ({fin})=>fin.paidByName||'Sin asignar', ({fin})=>fin.total), '#ff7849',
+    name => { const list = byPersGroup(name); showReservas(`👤 Pagado por ${name}`, list, f=>f.total, groupTotal(list)); });
+  finCharts.paid = finDoughnut('finPaidCanvas','finPaidMsg', finCharts.paid, paid, pend,
+    label => label === 'Pagado'
+      ? showReservas('✅ Pagado', fins.filter(x=>x.fin.paid>0), f=>f.paid, paid)
+      : showReservas('⏳ Pendiente', fins.filter(x=>x.fin.pending>0), f=>f.pending, pend));
+  finCharts.part = finBarChart('finPartCanvas','finPartMsg', finCharts.part, aggregateByParticipant(fins), '#46c47c',
+    name => showFinDetail(`🤝 Gasto de ${name} (reparto)`, participantDetailRows(fins, name)));
   renderFinUpcomingPayments(compraIds);
 
   const comp = budgetCompositionByCity();
@@ -3227,7 +3265,17 @@ async function renderFinDashboard() {
     [
       { label:'Día a día (€)',      data: comp.map(c => c.daily),      color:'#f7c948' },
       { label:'Reservas (≈€)',      data: comp.map(c => c.reservaEur), color:'#5db8ff' },
-    ]);
+    ],
+    (city, datasetLabel) => {
+      if (datasetLabel.startsWith('Día a día')) {
+        const rows = DATA.records.filter(r => r.ciudad === city && (parseFloat(r.presupuesto)||0) > 0)
+          .map(r => ({ label:r.actividad, sub:r.fecha, amount:`€${(parseFloat(r.presupuesto)||0).toFixed(0)}` }));
+        showFinDetail(`🧭 Día a día en ${city}`, rows);
+      } else {
+        const list = byCityGroup(city);
+        showReservas(`🧭 Reservas en ${city}`, list, f=>f.total, groupTotal(list));
+      }
+    });
 }
 
 function aggregateBy(items, keyFn, valueFn) {
@@ -3268,27 +3316,42 @@ function budgetCompositionByCity() {
   }).filter(c => c.daily > 0 || c.reservaEur > 0);
 }
 
-function renderFinUpcomingPayments(compraIds) {
-  const el = document.getElementById('finUpcomingPayments');
-  const upcoming = pagosData.pagos
+function renderFinUpcomingPayments(compraIds, opts = {}) {
+  const all = pagosData.pagos
     .filter(p => !p.pagado && compraIds.has(p.compra_id))
-    .sort((a,b) => String(a.fecha_pago||'').localeCompare(String(b.fecha_pago||'')))
-    .slice(0, 6);
-  if (!upcoming.length) { el.innerHTML = '<p style="color:var(--text-dim);font-style:italic;">Sin pagos pendientes para este filtro.</p>'; return; }
+    .sort((a,b) => String(a.fecha_pago||'').localeCompare(String(b.fecha_pago||'')));
   const today = new Date(); today.setHours(0,0,0,0);
-  el.innerHTML = upcoming.map(p => {
+  const describe = p => {
     const compra  = pagosData.compras.find(c => c.id === p.compra_id);
     const reserva = compra ? (DATA.reservations||[]).find(r => String(r.id) === String(compra.reserva_id)) : null;
-    const name    = reserva?.nombre || compra?.descripcion || 'Pago';
+    const name      = reserva?.nombre || compra?.descripcion || 'Pago';
     const due       = new Date(p.fecha_pago + 'T00:00:00');
     const daysUntil = Math.round((due - today) / 86400000);
     const label = daysUntil < 0 ? `Vencido hace ${-daysUntil}d` : daysUntil === 0 ? 'Vence hoy' : `En ${daysUntil}d`;
     const color = daysUntil < 0 ? '#ef4444' : daysUntil <= 5 ? 'var(--work)' : 'var(--text-dim)';
+    return { name, label, color };
+  };
+
+  // "Próximo pago" KPI click -> full uncapped list in the drill-down modal.
+  if (opts.asModal) {
+    const rows = all.map(p => {
+      const { name, label, color } = describe(p);
+      return { label: name, sub: label, amount: formatCop(p.valor_cuota, {withEur:false}), color };
+    });
+    showFinDetail('📅 Próximos pagos', rows);
+    return;
+  }
+
+  const el = document.getElementById('finUpcomingPayments');
+  const upcoming = all.slice(0, 6);
+  if (!upcoming.length) { el.innerHTML = '<p style="color:var(--text-dim);font-style:italic;">Sin pagos pendientes para este filtro.</p>'; return; }
+  el.innerHTML = upcoming.map(p => {
+    const { name, label, color } = describe(p);
     return `<div class="summary-row"><span class="label">${name} <span style="color:${color};font-size:0.75rem;">· ${label}</span></span><span class="value">${formatCop(p.valor_cuota)}</span></div>`;
   }).join('');
 }
 
-function finBarChart(canvasId, msgId, prev, entries, color) {
+function finBarChart(canvasId, msgId, prev, entries, color, onBarClick) {
   const canvas = document.getElementById(canvasId), msg = document.getElementById(msgId);
   if (prev) { prev.destroy(); prev = null; }
   if (!entries.length) { canvas.style.display='none'; msg.style.display=''; msg.textContent='Sin datos para este filtro.'; return null; }
@@ -3298,6 +3361,8 @@ function finBarChart(canvasId, msgId, prev, entries, color) {
     type:'bar',
     data:{ labels:entries.map(e=>e[0]), datasets:[{ data:entries.map(e=>Math.round(e[1])), backgroundColor:color+'aa', borderColor:color, borderWidth:1, borderRadius:3 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      onClick: (evt, elements) => { if (onBarClick && elements.length) onBarClick(entries[elements[0].index][0]); },
+      onHover: (evt, elements) => { evt.native.target.style.cursor = (onBarClick && elements.length) ? 'pointer' : 'default'; },
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:ctx=>` $${ctx.raw.toLocaleString('es-CO')}` } } },
       scales:{ x:{ ticks:{ color:tc.dim, callback:v=>'$'+Math.round(v).toLocaleString('es-CO') }, grid:{ color:tc.grid } },
                y:{ ticks:{ color:tc.text, font:{size:11} }, grid:{ color:tc.grid } } }
@@ -3305,23 +3370,26 @@ function finBarChart(canvasId, msgId, prev, entries, color) {
   });
 }
 
-function finDoughnut(canvasId, msgId, prev, paid, pend) {
+function finDoughnut(canvasId, msgId, prev, paid, pend, onSliceClick) {
   const canvas = document.getElementById(canvasId), msg = document.getElementById(msgId);
   if (prev) { prev.destroy(); prev = null; }
   if (paid + pend <= 0) { canvas.style.display='none'; msg.style.display=''; msg.textContent='Sin datos para este filtro.'; return null; }
   canvas.style.display=''; msg.style.display='none';
   const tc = chartTheme();
+  const labels = ['Pagado','Pendiente'];
   return new Chart(canvas, {
     type:'doughnut',
-    data:{ labels:['Pagado','Pendiente'], datasets:[{ data:[Math.round(paid),Math.round(pend)], backgroundColor:['#46c47c','#ff7849'], borderColor:cssVar('--surface'), borderWidth:2 }] },
+    data:{ labels, datasets:[{ data:[Math.round(paid),Math.round(pend)], backgroundColor:['#46c47c','#ff7849'], borderColor:cssVar('--surface'), borderWidth:2 }] },
     options:{ responsive:true, maintainAspectRatio:false,
+      onClick: (evt, elements) => { if (onSliceClick && elements.length) onSliceClick(labels[elements[0].index]); },
+      onHover: (evt, elements) => { evt.native.target.style.cursor = (onSliceClick && elements.length) ? 'pointer' : 'default'; },
       plugins:{ legend:{ position:'bottom', labels:{ color:tc.text } },
                 tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: $${ctx.raw.toLocaleString('es-CO')}` } } }
     }
   });
 }
 
-function finStackedBarChart(canvasId, msgId, prev, labels, datasets) {
+function finStackedBarChart(canvasId, msgId, prev, labels, datasets, onSegmentClick) {
   const canvas = document.getElementById(canvasId), msg = document.getElementById(msgId);
   if (prev) { prev.destroy(); prev = null; }
   if (!labels.length) { canvas.style.display='none'; msg.style.display=''; msg.textContent='Sin datos para este filtro.'; return null; }
@@ -3334,6 +3402,12 @@ function finStackedBarChart(canvasId, msgId, prev, labels, datasets) {
       backgroundColor: d.color+'aa', borderColor: d.color, borderWidth:1, borderRadius:3
     })) },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      onClick: (evt, elements) => {
+        if (!onSegmentClick || !elements.length) return;
+        const el = elements[0];
+        onSegmentClick(labels[el.index], datasets[el.datasetIndex].label);
+      },
+      onHover: (evt, elements) => { evt.native.target.style.cursor = (onSegmentClick && elements.length) ? 'pointer' : 'default'; },
       plugins:{ legend:{ display:true, labels:{ color:tc.text } },
                 tooltip:{ callbacks:{ label:ctx=>` ${ctx.dataset.label}: €${Math.round(ctx.raw).toLocaleString('es-ES')}` } } },
       scales:{ x:{ stacked:true, ticks:{ color:tc.dim, callback:v=>'€'+Math.round(v) }, grid:{ color:tc.grid } },
@@ -3767,6 +3841,66 @@ function showPayDaySummary(dateStr, dayPayments) {
 
   document.getElementById('payDaySummaryContent').innerHTML = totalRow + items;
   document.getElementById('payDaySummaryOverlay').classList.remove('hidden');
+}
+
+// ── Dashboard Financiero drill-down: click a KPI chip or a chart bar/slice to
+// see exactly which reservations/purchases sum to that number. ────────────────
+let _finDetailReady = false;
+function showFinDetail(title, rows, totalValueHtml) {
+  if (!_finDetailReady) {
+    _finDetailReady = true;
+    const overlay = document.getElementById('finDetailOverlay');
+    document.getElementById('finDetailClose').onclick = () => overlay.classList.add('hidden');
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.add('hidden'); });
+  }
+  document.getElementById('finDetailTitle').textContent = title;
+  const totalRow = totalValueHtml ? `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:12px;">
+      <span style="color:var(--text-dim);font-size:0.85rem;">${rows.length} elemento${rows.length===1?'':'s'}</span>
+      <span style="font-weight:700;font-size:1.05rem;color:var(--accent);">${totalValueHtml}</span>
+    </div>` : '';
+  const itemsHtml = rows.length ? rows.map(r => `
+    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:0.92rem;">${r.label}</div>
+          ${r.sub ? `<div style="font-size:0.78rem;color:var(--text-dim);margin-top:2px;">${r.sub}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0;font-weight:700;color:${r.color||'var(--text)'};">${r.amount}</div>
+      </div>
+    </div>`).join('') : '<p style="color:var(--text-dim);font-style:italic;">Sin datos.</p>';
+  document.getElementById('finDetailContent').innerHTML = totalRow + itemsHtml;
+  document.getElementById('finDetailOverlay').classList.remove('hidden');
+}
+
+// Builds {label, sub, amount} rows for a set of {r, fin} reservation entries —
+// shared by every KPI-chip and chart-click detail view in this dashboard.
+function finDetailRows(list, amountFn) {
+  return list.map(({r, fin}) => ({
+    label:  r.nombre,
+    sub:    [r.ciudad, r.tipo].filter(Boolean).join(' · '),
+    amount: formatCop(amountFn(fin), {withEur:false}),
+  }));
+}
+
+// "Gasto por participante" shows each person's SHARE of every purchase they're
+// a participant in — this reconstructs those individual line items (reusing
+// the same equal-split math as aggregateByParticipant()) for one person.
+function participantDetailRows(fins, name) {
+  const { participantes, personas } = pagosData;
+  const rows = [];
+  fins.forEach(({r, fin}) => {
+    fin.compras.forEach(c => {
+      const parts = participantes.filter(p => p.compra_id === c.id);
+      if (!parts.length) return;
+      const isMatch = parts.some(p => (personas.find(pe => pe.id === p.persona_id)?.nombre || 'Sin asignar') === name);
+      if (!isMatch) return;
+      const share = compraFinancials(c.id).total / parts.length;
+      rows.push({ label: r.nombre, sub: r.ciudad, amount: formatCop(share, {withEur:false}) });
+    });
+  });
+  return rows;
 }
 
 function renderPagosCalendar() {
