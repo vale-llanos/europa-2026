@@ -233,6 +233,9 @@
   .stat-pill.budget { color: var(--accent); background: var(--accent-soft); }
   .stat-pill.work { color: var(--work); background: #f7c94815; }
   .stat-pill.vacation { color: var(--vacation); background: #46c47c15; }
+  .stat-pill.reserva-cost { color: var(--tourism); background: #5db8ff15; }
+  .city-card .financial { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .city-card .weather-placeholder { margin-top: 10px; font-size: 0.75rem; color: var(--text-dim); font-style: italic; }
 
   /* Timeline view */
   .toolbar {
@@ -2216,6 +2219,17 @@ function cityColor(city) {
 
 const TRANSIT_MODES = new Set(['Vuelo', 'Bus', 'Tren', 'Ferry', 'vuelo', 'bus', 'tren', 'ferry']);
 
+// Country flag per city — a lightweight stand-in until cities are a real
+// lookup table (data-model normalization is a separate, future phase).
+const CITY_FLAGS = {
+  Madrid: '🇪🇸', Alicante: '🇪🇸', Barcelona: '🇪🇸',
+  'París': '🇫🇷',
+  Bruselas: '🇧🇪',
+  'Ámsterdam': '🇳🇱',
+  'Milán': '🇮🇹', Venecia: '🇮🇹', Florencia: '🇮🇹', 'Nápoles': '🇮🇹', Roma: '🇮🇹',
+};
+function cityFlag(city) { return CITY_FLAGS[city] || '🌍'; }
+
 function discoverCities() {
   const known = new Set(DATA.cityOrder);
   DATA.records.forEach(r => {
@@ -2284,20 +2298,30 @@ function renderCityGrid() {
   DATA.cityOrder.forEach((city, idx) => {
     const items = DATA.records.filter(r => r.ciudad === city);
     const dates = [...new Set(items.map(r => r.fecha))];
-    const budget = items.reduce((s,r) => s+(parseFloat(r.presupuesto)||0), 0);
+    const dailyBudget = items.reduce((s,r) => s+(parseFloat(r.presupuesto)||0), 0);
     const workCount = items.filter(r => classifyCategory(r.categoria) === 'work').length;
     const vacCount  = new Set(items.filter(r => r.vacaciones==='Si').map(r => r.fecha)).size;
+    const cityReservations = DATA.reservations.filter(r => r.ciudad === city);
+    // Real reservation cost (Purchases/Payments) — 0 until pagosData is loaded,
+    // corrected by the re-render in switchItinSub's 'ciudades' branch.
+    const reservaCost = cityReservations.reduce((s,r) => s + reservaFinancials(r.id).total, 0);
     const card = document.createElement('div');
     card.className = 'city-card';
     card.innerHTML = `
       <div class="num">#${idx+1}</div>
-      <h3>${city}</h3>
+      <h3>${cityFlag(city)} ${city}</h3>
       <div class="dates">${dates.length} día${dates.length>1?'s':''} · ${dates[0]||''} → ${dates[dates.length-1]||''}</div>
       <div class="stats">
-        <span class="stat-pill budget">€${budget.toFixed(0)}</span>
+        <span class="stat-pill">🎫 ${cityReservations.length} reserva${cityReservations.length===1?'':'s'}</span>
+        <span class="stat-pill">📋 ${items.length} actividad${items.length===1?'':'es'}</span>
         ${workCount ? `<span class="stat-pill work">${workCount} trabajo</span>` : ''}
         ${vacCount  ? `<span class="stat-pill vacation">${vacCount} vacaciones</span>` : ''}
-      </div>`;
+      </div>
+      <div class="financial">
+        <span class="stat-pill budget">€${dailyBudget.toFixed(0)} presupuesto diario est.</span>
+        ${reservaCost > 0 ? `<span class="stat-pill reserva-cost">${formatCop(reservaCost)} en reservas</span>` : ''}
+      </div>
+      <div class="weather-placeholder">🌤️ Clima — próximamente</div>`;
     card.onclick = () => openCity(city);
     grid.appendChild(card);
   });
@@ -3131,15 +3155,13 @@ async function renderFinDashboard() {
   const total = fins.reduce((s,{fin})=>s+fin.total,0);
   const paid  = fins.reduce((s,{fin})=>s+fin.paid,0);
   const pend  = total - paid;
-  const confirmed = fins.filter(({fin})=>fin.payStatus==='paid').length;
-  const pendingCount = recs.length - confirmed;
+  const confirmed    = fins.filter(({fin})=>fin.payStatus==='paid').length;
+  const partialCount = fins.filter(({fin})=>fin.payStatus==='partial').length;
+  const unpaidCount  = fins.filter(({fin})=>fin.payStatus==='unpaid').length;
+  const noneCount    = fins.filter(({fin})=>fin.payStatus==='none').length;
 
   // ── Actionable-first row: what needs attention, before any historical chart ──
   const compraIds = new Set(fins.flatMap(({fin}) => fin.compras.map(c => c.id)));
-  const remainingInstallments = fins.reduce((s,{fin}) => s + fin.compras.reduce((s2,c) => {
-    const cf = compraFinancials(c.id);
-    return s2 + Math.max(0, cf.cuotasTotales - cf.cuotasPagadas);
-  }, 0), 0);
   const due = nextPaymentDue(compraIds);
 
   const actionKpis = [];
@@ -3153,7 +3175,6 @@ async function renderFinDashboard() {
   }
   actionKpis.push({ label:'Saldo pendiente',   value: formatCop(pend), color:'var(--work)' });
   actionKpis.push({ label:'Total pagado',      value: formatCop(paid), color:'var(--vacation)' });
-  actionKpis.push({ label:'Cuotas restantes',  value: remainingInstallments, color:'var(--accent)' });
 
   document.getElementById('finActionKpis').innerHTML = actionKpis.map(k => `
     <div class="kpi-card" style="--accent-bar:${k.color};">
@@ -3164,9 +3185,11 @@ async function renderFinDashboard() {
 
   // ── Secondary totals row ──────────────────────────────────────────────────
   const kpis = [
-    { label:'Gasto total',          value:formatCop(total), color:'var(--accent)' },
-    { label:'Reservas confirmadas', value:confirmed,        color:'var(--vacation)' },
-    { label:'Reservas pendientes',  value:pendingCount,     color:'var(--work)' },
+    { label:'Gasto total',           value:formatCop(total), color:'var(--accent)' },
+    { label:'Confirmadas (pagadas)', value:confirmed,        color:'var(--vacation)' },
+    { label:'Parcialmente pagadas',  value:partialCount,     color:'var(--work)' },
+    { label:'Sin pagar',             value:unpaidCount,      color:'#ef4444' },
+    { label:'Sin costo registrado',  value:noneCount,        color:'var(--text-dim)' },
   ];
   document.getElementById('finKpis').innerHTML = kpis.map(k => `
     <div class="kpi-card" style="--accent-bar:${k.color};">
@@ -4022,6 +4045,8 @@ function switchItinSub(sub) {
     renderMap();
     renderCityGrid();
     setTimeout(() => { if (map) map.invalidateSize(); }, 80);
+    // Reservation cost per city needs compras/pagos loaded to be accurate.
+    ensurePagosData().then(() => { if (itinSubView === 'ciudades') renderCityGrid(); });
   }
 }
 
