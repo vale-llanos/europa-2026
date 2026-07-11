@@ -10,7 +10,11 @@
 // Required secret (Supabase -> Project Settings -> Edge Functions -> Secrets):
 //   GEMINI_API_KEY   (free tier key from https://aistudio.google.com/apikey)
 // Optional secret:
-//   GEMINI_MODEL     (defaults to "gemini-2.0-flash")
+//   GEMINI_MODEL     (defaults to "gemini-2.5-flash" — the free-tier model as of
+//                     mid-2026; gemini-2.0-flash was deprecated/retired and now
+//                     has a 0 free quota. If you hit rate limits, try setting
+//                     this secret to "gemini-2.5-flash-lite" instead, which has
+//                     a higher free daily request limit at slightly lower quality.)
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 //
 // Deploy (Dashboard: Edge Functions -> Create function -> name it exactly
@@ -24,7 +28,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const SUPABASE_URL   = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
-const GEMINI_MODEL   = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.0-flash";
+const GEMINI_MODEL   = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
 const GEMINI_URL     = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE);

@@ -42,7 +42,7 @@ Supabase → **Project Settings → Edge Functions → Secrets** (or
 | Secret            | Value                                      |
 | ----------------- | ------------------------------------------- |
 | `GEMINI_API_KEY`  | the key from step 1                         |
-| `GEMINI_MODEL`    | *(optional)* defaults to `gemini-2.0-flash` |
+| `GEMINI_MODEL`    | *(optional)* defaults to `gemini-2.5-flash` — if you hit rate limits, set this to `gemini-2.5-flash-lite` instead (lower quality, much higher free daily limit) |
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided automatically —
 you don't add those.
@@ -79,6 +79,12 @@ finances, "any suggestions?") directly in the app.
 - If Gemini returns something confusing or wrong, check the Edge Function's
   logs (Supabase → Edge Functions → travel-assistant → Logs) — most issues
   are either the API key not being set yet, or a temporary Gemini API error.
+- If the logs show a `429 RESOURCE_EXHAUSTED` error with `limit: 0` for a
+  model name, that model has been deprecated and no longer has a free-tier
+  quota — set the `GEMINI_MODEL` secret to a current model name (check
+  [Google AI Studio](https://aistudio.google.com/) for what's currently
+  available on the free tier) rather than assuming the one in this repo is
+  still current, since Google's free-tier model lineup changes over time.
 - "Which purchases include interest" and precise "travel time between
   cities" questions are intentionally limited — the app doesn't track
   interest/fees at all, and inter-city travel time is only as good as the
