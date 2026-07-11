@@ -25,6 +25,10 @@ alter table public.compras
   add column if not exists paid_by uuid references public.personas(id);
 
 -- 2) Create a compra for every reserva that has a legacy price but no compra yet.
+--    faltante_total is a generated column (Postgres computes it) — not inserted.
+--    pagos rows are NOT inserted here either: a DB trigger (crear_pagos_compra)
+--    auto-creates them (one per cuotas_totales, monthly-spaced from fecha_pago,
+--    using this row's valor_cuota) right after this INSERT runs.
 with orphans as (
   select r.*, r.precio * (select eur_cop_rate from _fx) as precio_cop
   from public.reservas r
@@ -35,40 +39,44 @@ matched_persona as (
   select o.id as reserva_id, p.id as persona_id
   from orphans o
   left join public.personas p on lower(p.nombre) = lower(o."whoPaid")
-),
-inserted_compras as (
-  insert into public.compras (reserva_id, descripcion, valor_total, cuotas_totales, cuotas_pagadas, faltante_total, fecha_pago, paid_by)
-  select
-    o.id,
-    o.nombre,
-    o.precio_cop,
-    greatest(coalesce(o.installments, 1), 1),
-    case when o."payStatus" = 'paid' then greatest(coalesce(o.installments, 1), 1) else 0 end,
-    case when o."payStatus" = 'paid' then 0 else o.precio_cop end,
-    o."payDue",
-    mp.persona_id
-  from orphans o
-  join matched_persona mp on mp.reserva_id = o.id
-  returning id, reserva_id, valor_total, cuotas_totales
 )
--- 3) Generate the pagos rows for each newly created compra: an even split of
---    valor_total across cuotas_totales installments (remainder on the last one).
-insert into public.pagos (compra_id, numero_cuota, valor_cuota, pagado, fecha_pago, fecha_pagado)
+insert into public.compras (reserva_id, descripcion, valor_total, valor_cuota, cuotas_totales, cuotas_pagadas, fecha_pago, paid_by)
 select
-  ic.id,
-  n,
-  case
-    when n = ic.cuotas_totales
-      then ic.valor_total - ((floor((ic.valor_total / ic.cuotas_totales) * 100) / 100) * (ic.cuotas_totales - 1))
-    else floor((ic.valor_total / ic.cuotas_totales) * 100) / 100
-  end,
-  o."payStatus" = 'paid',
-  o."payDue",
-  case when o."payStatus" = 'paid' then now() else null end
-from inserted_compras ic
-join public.reservas o on o.id = ic.reserva_id
-cross join lateral generate_series(1, ic.cuotas_totales) as n;
+  o.id,
+  o.nombre,
+  o.precio_cop,
+  floor((o.precio_cop / greatest(coalesce(o.installments, 1), 1)) * 100) / 100,
+  greatest(coalesce(o.installments, 1), 1),
+  case when o."payStatus" = 'paid' then greatest(coalesce(o.installments, 1), 1) else 0 end,
+  coalesce(o."payDue", o.fecha, current_date),
+  mp.persona_id
+from orphans o
+join matched_persona mp on mp.reserva_id = o.id;
+
+-- 3) The trigger above always creates pagos as unpaid. This is a SEPARATE
+--    statement (not a CTE tacked onto the INSERT above) on purpose: within a
+--    single combined statement, Postgres does not guarantee that a later part
+--    sees rows an earlier part's trigger just created in a different table —
+--    which is exactly why the first version of this script silently marked
+--    nothing paid. It also runs against ALL matching compras (not just ones
+--    from step 2), so it retroactively fixes any compras a previous partial
+--    run already created. Safe to re-run.
+update public.pagos p
+set pagado = true, fecha_pagado = coalesce(p.fecha_pagado, now())
+from public.compras c
+join public.reservas r on r.id = c.reserva_id
+where p.compra_id = c.id
+  and r."payStatus" = 'paid'
+  and p.pagado is not true;
 
 commit;
 
--- After running, re-run phase1_audit.sql query #1 — it should return 0 rows.
+-- After running, re-run phase1_audit.sql query #1 — it should return 0 rows,
+-- and this should now return 0 rows too (no unpaid pagos left under a
+-- reserva that was marked payStatus = 'paid'):
+--
+-- select r.id, r.nombre
+-- from public.reservas r
+-- join public.compras c on c.reserva_id = r.id
+-- join public.pagos p on p.compra_id = c.id
+-- where r."payStatus" = 'paid' and p.pagado is not true;

@@ -4128,19 +4128,15 @@ async function reconcileReservaCompra(reservaId, { precio, cuotasTotales, paidBy
   }
 
   if (existing.length === 0) {
-    const { data: compra, error } = await sb.from('compras').insert([{
-      reserva_id: reservaId, descripcion, valor_total: precio, cuotas_totales: cuotasTotales,
-      cuotas_pagadas: 0, faltante_total: precio, fecha_pago: payDue, paid_by: paidBy
-    }]).select().single();
+    // faltante_total is a DB-generated column (not settable), and a DB trigger
+    // (crear_pagos_compra) auto-creates this compra's pagos rows right after
+    // insert — so we only insert the compra itself, never pagos here.
+    const valorCuota = Math.floor((precio / cuotasTotales) * 100) / 100;
+    const { error } = await sb.from('compras').insert([{
+      reserva_id: reservaId, descripcion, valor_total: precio, valor_cuota: valorCuota,
+      cuotas_totales: cuotasTotales, cuotas_pagadas: 0, fecha_pago: payDue, paid_by: paidBy
+    }]);
     if (error) throw error;
-    const per = Math.floor((precio / cuotasTotales) * 100) / 100;
-    const rows = Array.from({ length: cuotasTotales }, (_, i) => ({
-      compra_id: compra.id, numero_cuota: i + 1,
-      valor_cuota: i === cuotasTotales - 1 ? +(precio - per * (cuotasTotales - 1)).toFixed(2) : per,
-      pagado: false, fecha_pago: payDue
-    }));
-    const { error: e2 } = await sb.from('pagos').insert(rows);
-    if (e2) throw e2;
     return;
   }
 
