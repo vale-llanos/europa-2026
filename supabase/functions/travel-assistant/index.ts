@@ -376,7 +376,7 @@ function toolDeclarations() {
 
 async function answerQuestion(question: string, data: TripData): Promise<{ summary: string; items: AssistantItem[] }> {
   const first = await callGemini({
-    system_instruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+    systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
     contents: [{ role: "user", parts: [{ text: question }] }],
     tools: toolDeclarations(),
   });
@@ -402,11 +402,11 @@ async function answerQuestion(question: string, data: TripData): Promise<{ summa
 
   // Analysis path: send the raw facts back to Gemini to phrase a short insight.
   const second = await callGemini({
-    system_instruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+    systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
     contents: [
       { role: "user", parts: [{ text: question }] },
       { role: "model", parts: [{ functionCall: call }] },
-      { role: "function", parts: [{ functionResponse: { name: call.name, response: result.facts ?? {} } }] },
+      { role: "user", parts: [{ functionResponse: { name: call.name, response: result.facts ?? {} } }] },
     ],
     tools: toolDeclarations(),
   });
