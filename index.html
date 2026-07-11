@@ -310,7 +310,9 @@
     border-radius: 8px;
     padding: 12px 14px;
     margin-bottom: 6px;
+    cursor: pointer;
   }
+  .activity.map-highlight { outline: 2px solid var(--accent); outline-offset: 2px; }
   .activity.work {
     border-left-color: var(--work);
     background: #f7c94808;
@@ -861,7 +863,6 @@
   }
   .filter-select:focus { outline: none; border-color: var(--accent); }
   .filter-select option { background: var(--surface-2); }
-  .toolbar-sep { width: 1px; background: var(--border); align-self: stretch; flex-shrink: 0; }
 
   /* === LOADING OVERLAY === */
   .loading-overlay {
@@ -1236,6 +1237,8 @@
   @media (max-width: 860px) { .split-row { grid-template-columns: 1fr; } }
   .mini-map-wrap { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); height: 220px; position: relative; }
   .mini-map-wrap .expand-link { position: absolute; right: 10px; bottom: 10px; z-index: 500; font-size: 0.75rem; font-weight: 700; color: var(--accent); background: var(--surface); padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+  .mini-map-wrap.crono-map { height: 560px; position: sticky; top: 76px; }
+  @media (max-width: 860px) { .mini-map-wrap.crono-map { position: static; height: 280px; } }
 
   .tl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; height: 220px; overflow-y: auto; }
   .tl-day { font-size: 0.74rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin: 12px 0 8px; }
@@ -1363,51 +1366,66 @@
   <div id="view-home" class="hidden">
     <div class="section-head-row">
       <div class="section-title" style="margin-bottom:0;">🗺️ Itinerario</div>
-      <button class="quick-action primary" id="editItineraryBtn">✏️ Editar itinerario</button>
     </div>
-    <div id="map"></div>
-    <div class="city-grid" id="cityGrid"></div>
-  </div>
+    <div class="subtabs" id="itinSubtabs">
+      <button class="subtab active" data-sub="cronologia">🕐 Cronología</button>
+      <button class="subtab" data-sub="calendario">🗓️ Calendario</button>
+      <button class="subtab" data-sub="ciudades">🏙️ Ciudades</button>
+    </div>
 
-  <!-- CRONOLOGÍA: day-by-day editing mode (reached from Itinerario) -->
-  <div id="view-timeline" class="hidden">
-    <div class="section-head-row">
-      <button class="back-btn" id="cronoBackBtn" style="margin-bottom:0;">← Volver al itinerario</button>
-      <div class="section-title" style="margin-bottom:0;">✏️ Editar itinerario · Cronología</div>
+    <!-- Shared filters (Cronología + Calendario only) -->
+    <div id="itinFiltersBar">
+      <button class="back-btn hidden" id="backBtn">← Todas las ciudades</button>
+      <div class="toolbar">
+        <div class="filter-group">
+          <label for="filterType">Tipo</label>
+          <select id="filterType" class="filter-select">
+            <option value="all">Todos</option>
+            <option value="tourism">🏛️ Turismo</option>
+            <option value="food">🍽️ Comida</option>
+            <option value="work">💻 Trabajo</option>
+            <option value="transport">🚆 Transporte</option>
+            <option value="rest">😴 Descanso</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterCity">Ciudad</label>
+          <select id="filterCity" class="filter-select">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterVacation">Vacaciones</label>
+          <select id="filterVacation" class="filter-select">
+            <option value="all">Todos</option>
+            <option value="Si">🏖️ Sí</option>
+            <option value="No">💼 No</option>
+          </select>
+        </div>
+        <button class="filter-btn" id="clearFilters" title="Limpiar todos los filtros" style="margin-left:auto;">✕ Limpiar</button>
+      </div>
     </div>
-    <button class="back-btn hidden" id="backBtn">← Todas las ciudades</button>
-    <div class="toolbar">
-      <button class="filter-btn" id="calToggle">🗓️ Calendario</button>
-      <div class="toolbar-sep"></div>
-      <div class="filter-group">
-        <label for="filterType">Tipo</label>
-        <select id="filterType" class="filter-select">
-          <option value="all">Todos</option>
-          <option value="tourism">🏛️ Turismo</option>
-          <option value="food">🍽️ Comida</option>
-          <option value="work">💻 Trabajo</option>
-          <option value="transport">🚆 Transporte</option>
-          <option value="rest">😴 Descanso</option>
-        </select>
+
+    <!-- Sub-tab: Cronología (default) -->
+    <div id="itin-cronologia">
+      <div class="split-row">
+        <div id="timeline"></div>
+        <div class="mini-map-wrap crono-map">
+          <div id="cronoMap" style="width:100%;height:100%;"></div>
+        </div>
       </div>
-      <div class="filter-group">
-        <label for="filterCity">Ciudad</label>
-        <select id="filterCity" class="filter-select">
-          <option value="">Todas</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="filterVacation">Vacaciones</label>
-        <select id="filterVacation" class="filter-select">
-          <option value="all">Todos</option>
-          <option value="Si">🏖️ Sí</option>
-          <option value="No">💼 No</option>
-        </select>
-      </div>
-      <button class="filter-btn" id="clearFilters" title="Limpiar todos los filtros" style="margin-left:auto;">✕ Limpiar</button>
     </div>
-    <div id="calendar" class="hidden"></div>
-    <div id="timeline"></div>
+
+    <!-- Sub-tab: Calendario -->
+    <div id="itin-calendario" class="hidden">
+      <div id="calendar"></div>
+    </div>
+
+    <!-- Sub-tab: Ciudades -->
+    <div id="itin-ciudades" class="hidden">
+      <div id="map"></div>
+      <div class="city-grid" id="cityGrid"></div>
+    </div>
   </div>
 
   <!-- FINANZAS SECTION: Dashboard Financiero · Reservas · Pagos -->
@@ -2153,7 +2171,7 @@ let currentView    = 'home';
 let currentCity    = null;
 let currentFilter  = 'all';
 let currentVacFilter = 'all';
-let calendarMode   = false;
+let itinSubView    = 'cronologia'; // 'cronologia' | 'calendario' | 'ciudades'
 let resPayFilter   = 'all';
 let pagosBarChart       = null;
 let pagosMonthChart     = null;
@@ -2164,6 +2182,8 @@ let _pagosCalListenerReady = false;
 let map            = null;
 let cityMarkers    = {};
 let cityDetailMap  = null;
+let cronoMap       = null;
+let cronoMarkers   = new Map();
 let geocodeTimer      = null;
 let locationTimer     = null;
 let modalLocationCoords = null;
@@ -2231,8 +2251,6 @@ function hexRgba(hex, a) {
 }
 
 // ── Home view ─────────────────────────────────────────────────────────────────
-function renderHome() { renderMap(); renderCityGrid(); }
-
 function renderMap() {
   if (map) map.remove();
   map = L.map('map', { scrollWheelZoom: false }).setView([46,5],4);
@@ -2305,6 +2323,31 @@ function renderCityDetail(city) {
   setTimeout(() => initCityDetailMap(city, cityRecords), 80);
 }
 
+// Plots every record with `coords` as a colored, category-icon marker on
+// `targetMap`. Shared by the per-city map and the cross-city Cronología map
+// so the two never drift apart. Returns the ones actually plotted plus a
+// record -> marker lookup (for map<->list sync).
+const ACTIVITY_MARKER_COLORS = { work:'#f7c948', food:'#ec407a', tourism:'#5db8ff', transport:'#b388ff', rest:'#94a3b8' };
+function addActivityMarkers(targetMap, records, { onMarkerClick } = {}) {
+  const withCoords = records.filter(r => r.coords && Array.isArray(r.coords) && r.coords.length === 2);
+  const markers = new Map();
+  withCoords.forEach(r => {
+    const type = classifyCategory(r.categoria);
+    const c = ACTIVITY_MARKER_COLORS[type] || '#ff7849';
+    const marker = L.marker(r.coords, {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="background:${c};color:#0f1419;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;border:2px solid #0f1419;box-shadow:0 2px 6px rgba(0,0,0,0.5);">${categoryEmoji(type)}</div>`,
+        iconSize: [26,26], iconAnchor: [13,13]
+      })
+    }).bindPopup(`<b>${r.actividad}</b>${r.horario?`<br>${r.horario}`:''}${r.presupuesto>0?`<br>€${r.presupuesto}`:''}`)
+      .addTo(targetMap);
+    if (onMarkerClick) marker.on('click', () => onMarkerClick(r));
+    markers.set(r, marker);
+  });
+  return { withCoords, markers };
+}
+
 function initCityDetailMap(city, cityRecords) {
   if (cityDetailMap) { cityDetailMap.remove(); cityDetailMap = null; }
   const center = DATA.cityCoords[city];
@@ -2313,23 +2356,53 @@ function initCityDetailMap(city, cityRecords) {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
   }).addTo(cityDetailMap);
-  const withCoords = cityRecords.filter(r => r.coords && Array.isArray(r.coords) && r.coords.length === 2);
-  const catColor = { work:'#f7c948', food:'#ec407a', tourism:'#5db8ff', transport:'#b388ff', rest:'#94a3b8' };
-  withCoords.forEach(r => {
-    const type = classifyCategory(r.categoria);
-    const c = catColor[type] || '#ff7849';
-    L.marker(r.coords, {
-      icon: L.divIcon({
-        className: '',
-        html: `<div style="background:${c};color:#0f1419;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;border:2px solid #0f1419;box-shadow:0 2px 6px rgba(0,0,0,0.5);">${categoryEmoji(type)}</div>`,
-        iconSize: [26,26], iconAnchor: [13,13]
-      })
-    }).bindPopup(`<b>${r.actividad}</b>${r.horario?`<br>${r.horario}`:''}${r.presupuesto>0?`<br>€${r.presupuesto}`:''}`)
-      .addTo(cityDetailMap);
-  });
+  const { withCoords } = addActivityMarkers(cityDetailMap, cityRecords);
   if (withCoords.length > 1) {
     cityDetailMap.fitBounds(withCoords.map(r => r.coords), { padding: [30,30] });
   }
+}
+
+// Cross-city map for the Cronología tab — every activity with coords (across
+// all cities, or one city if filtered), plus a dimmed route for context.
+// Synced with the timeline list in both directions.
+function renderCronoMap() {
+  const el = document.getElementById('cronoMap');
+  if (!el || currentView !== 'home' || itinSubView !== 'cronologia') return;
+  if (cronoMap) { cronoMap.remove(); cronoMap = null; }
+  cronoMap = L.map('cronoMap', { scrollWheelZoom: false, zoomControl: false }).setView([46,5], 4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+  }).addTo(cronoMap);
+
+  const path = [];
+  DATA.cityOrder.forEach(city => { const c = DATA.cityCoords[city]; if (c) path.push(c); });
+  if (path.length > 1) L.polyline(path, { color:'#ff7849', weight:2, opacity:0.35, dashArray:'6,8' }).addTo(cronoMap);
+
+  const records = currentCity ? DATA.records.filter(r => r.ciudad === currentCity) : DATA.records;
+  const { withCoords, markers } = addActivityMarkers(cronoMap, records, { onMarkerClick: focusTimelineActivity });
+  cronoMarkers = markers;
+
+  if (withCoords.length > 1) cronoMap.fitBounds(withCoords.map(r => r.coords), { padding:[30,30] });
+  else if (withCoords.length === 1) cronoMap.setView(withCoords[0].coords, 13);
+  else if (path.length) cronoMap.fitBounds(path, { padding:[30,30] });
+}
+
+// Marker clicked on the map -> scroll to and briefly highlight its timeline card.
+function focusTimelineActivity(record) {
+  const idx = DATA.records.indexOf(record);
+  const el = document.querySelector(`.activity[data-record-idx="${idx}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  el.classList.add('map-highlight');
+  setTimeout(() => el.classList.remove('map-highlight'), 1600);
+}
+
+// Timeline card clicked -> pan the map to and open the popup of its marker.
+function focusCronoMapMarker(record) {
+  const marker = cronoMarkers.get(record);
+  if (!cronoMap || !marker) return;
+  cronoMap.flyTo(marker.getLatLng(), 15);
+  marker.openPopup();
 }
 
 function renderCityAccordion(city, cityRecords) {
@@ -2582,6 +2655,8 @@ function renderTimeline() {
       const type = classifyCategory(it.categoria);
       const div = document.createElement('div');
       div.className = `activity ${type}`;
+      div.dataset.recordIdx = globalIdx;
+      div.onclick = () => focusCronoMapMarker(it);
       div.innerHTML = `
         <div class="activity-head">
           <div class="time">${it.horario||''}</div>
@@ -2692,12 +2767,7 @@ function renderCalendar() {
       if (inTrip && !isFiltered) {
         cell.title = (isVac ? '🏖️ ' : hasWork ? '💻 ' : '') + key + (primaryCity ? ` — ${primaryCity}` : '');
         cell.onclick = () => {
-          calendarMode = false;
-          document.getElementById('calToggle').classList.remove('active');
-          document.getElementById('calToggle').textContent = '🗓️ Calendario';
-          document.getElementById('calendar').classList.add('hidden');
-          document.getElementById('timeline').classList.remove('hidden');
-          switchView('timeline');
+          switchItinSub('cronologia');
           setTimeout(() => {
             const el = document.getElementById(`day-${key.replace(/[^a-zA-Z0-9]/g,'-')}`);
             if (el) el.scrollIntoView({behavior:'smooth',block:'start'});
@@ -3885,8 +3955,11 @@ function switchView(view) {
   if (currentView === 'dashboard' && view !== 'dashboard') {
     if (dashMiniMap) { dashMiniMap.remove(); dashMiniMap = null; }
   }
+  if (currentView === 'home' && view !== 'home') {
+    if (cronoMap) { cronoMap.remove(); cronoMap = null; }
+  }
   currentView = view;
-  ['dashboard','home','timeline','finanzas','city-detail'].forEach(v => {
+  ['dashboard','home','finanzas','city-detail'].forEach(v => {
     document.getElementById(`view-${v}`).classList.toggle('hidden', v !== view);
   });
   if (view === 'dashboard') {
@@ -3895,16 +3968,33 @@ function switchView(view) {
     currentCity = null;
     document.getElementById('filterCity').value = '';
     document.getElementById('backBtn').classList.add('hidden');
-    renderHome();
-    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
-  } else if (view === 'timeline') {
-    if (!currentCity) document.getElementById('backBtn').classList.add('hidden');
-    if (calendarMode) renderCalendar(); else renderTimeline();
+    switchItinSub(itinSubView);
   } else if (view === 'finanzas') {
     switchFinSub(finSubView);
   }
   updateDrawerActive(view);
   // city-detail: content rendered before this call in openCity
+}
+
+// Itinerario sub-tab switching (Cronología · Calendario · Ciudades)
+function switchItinSub(sub) {
+  itinSubView = sub;
+  document.querySelectorAll('#itinSubtabs .subtab').forEach(b =>
+    b.classList.toggle('active', b.dataset.sub === sub));
+  document.getElementById('itin-cronologia').classList.toggle('hidden', sub !== 'cronologia');
+  document.getElementById('itin-calendario').classList.toggle('hidden', sub !== 'calendario');
+  document.getElementById('itin-ciudades').classList.toggle('hidden', sub !== 'ciudades');
+  document.getElementById('itinFiltersBar').classList.toggle('hidden', sub === 'ciudades');
+  if (sub === 'cronologia') {
+    renderTimeline();
+    setTimeout(renderCronoMap, 80);
+  } else if (sub === 'calendario') {
+    renderCalendar();
+  } else if (sub === 'ciudades') {
+    renderMap();
+    renderCityGrid();
+    setTimeout(() => { if (map) map.invalidateSize(); }, 80);
+  }
 }
 
 // Finanzas sub-tab switching (Dashboard Financiero · Reservas · Pagos)
@@ -3939,8 +4029,8 @@ function navigate(nav) {
 
 // ── Filter init ───────────────────────────────────────────────────────────────
 function rerender() {
-  if (currentView === 'timeline') {
-    calendarMode ? renderCalendar() : renderTimeline();
+  if (currentView === 'home' && (itinSubView === 'cronologia' || itinSubView === 'calendario')) {
+    itinSubView === 'calendario' ? renderCalendar() : renderTimeline();
   } else if (currentView === 'city-detail' && currentCity) {
     renderCityDetail(currentCity);
   }
@@ -3987,11 +4077,19 @@ document.querySelectorAll('.drawer-item[data-nav]').forEach(btn => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
-// Itinerario ⇄ Cronología (editing mode)
-document.getElementById('editItineraryBtn').onclick = () => switchView('timeline');
-document.getElementById('cronoBackBtn').onclick = () => { currentCity = null; switchView('home'); };
-document.getElementById('backBtn').onclick = () => { currentCity = null; switchView('home'); };
+// Itinerario: clear the "one city" filter, back to city-detail
+document.getElementById('backBtn').onclick = () => {
+  currentCity = null;
+  document.getElementById('filterCity').value = '';
+  document.getElementById('backBtn').classList.add('hidden');
+  rerender();
+};
 document.getElementById('cityDetailBackBtn').onclick = () => { currentCity = null; switchView('home'); };
+
+// Itinerario sub-tabs
+document.querySelectorAll('#itinSubtabs .subtab').forEach(b => {
+  b.onclick = () => switchItinSub(b.dataset.sub);
+});
 
 // Finanzas sub-tabs
 document.querySelectorAll('#finanzasSubtabs .subtab').forEach(b => {
@@ -4023,14 +4121,6 @@ window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', ()
   if (!document.documentElement.getAttribute('data-theme')) { updateThemeLabel(); refreshThemedCharts(); }
 });
 updateThemeLabel();
-document.getElementById('calToggle').onclick = () => {
-  calendarMode = !calendarMode;
-  document.getElementById('calToggle').classList.toggle('active', calendarMode);
-  document.getElementById('calToggle').textContent = calendarMode ? '📋 Lista' : '🗓️ Calendario';
-  document.getElementById('calendar').classList.toggle('hidden', !calendarMode);
-  document.getElementById('timeline').classList.toggle('hidden', calendarMode);
-  if (calendarMode) renderCalendar(); else renderTimeline();
-};
 
 // ── Vacation toggle ───────────────────────────────────────────────────────────
 async function toggleVacationDay(fecha) {
