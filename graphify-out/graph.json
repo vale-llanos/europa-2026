@@ -1,7 +1,52 @@
 {
   "directed": false,
   "multigraph": false,
-  "graph": {},
+  "graph": {
+    "hyperedges": [
+      {
+        "id": "supabase_edge_functions_pattern",
+        "label": "Supabase Edge Functions Architecture (client \u2192 travel-assistant / send-payment-reminders)",
+        "nodes": [
+          "ai_assistant_setup_travel_assistant_function",
+          "push_setup_send_payment_reminders_function",
+          "index_supabase_client"
+        ],
+        "relation": "participate_in",
+        "confidence": "INFERRED",
+        "confidence_score": 0.85,
+        "source_file": "index.html"
+      },
+      {
+        "id": "spa_view_system",
+        "label": "Europa 2026 Multi-View SPA Structure",
+        "nodes": [
+          "index_view_navigation",
+          "index_trip_data",
+          "index_leaflet_map",
+          "index_chartjs_charts",
+          "index_finanzas_pagos"
+        ],
+        "relation": "form",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "index.html"
+      },
+      {
+        "id": "push_notification_pipeline",
+        "label": "Push Notification Pipeline (subscribe \u2192 store \u2192 cron \u2192 deliver)",
+        "nodes": [
+          "index_push_registration",
+          "index_service_worker_registration",
+          "push_setup_vapid_keys",
+          "push_setup_send_payment_reminders_function"
+        ],
+        "relation": "form",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "index.html"
+      }
+    ]
+  },
   "nodes": [
     {
       "label": "manifest.json",
@@ -10,7 +55,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "manifest",
-      "community": 0,
+      "community": 1,
       "norm_label": "manifest.json"
     },
     {
@@ -20,7 +65,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "manifest_name",
-      "community": 0,
+      "community": 1,
       "norm_label": "name"
     },
     {
@@ -30,7 +75,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "manifest_short_name",
-      "community": 0,
+      "community": 1,
       "norm_label": "short_name"
     },
     {
@@ -40,7 +85,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "manifest_description",
-      "community": 0,
+      "community": 1,
       "norm_label": "description"
     },
     {
@@ -50,7 +95,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "manifest_start_url",
-      "community": 0,
+      "community": 1,
       "norm_label": "start_url"
     },
     {
@@ -60,7 +105,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "manifest_scope",
-      "community": 0,
+      "community": 1,
       "norm_label": "scope"
     },
     {
@@ -70,7 +115,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "manifest_display",
-      "community": 0,
+      "community": 1,
       "norm_label": "display"
     },
     {
@@ -80,7 +125,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "manifest_background_color",
-      "community": 0,
+      "community": 1,
       "norm_label": "background_color"
     },
     {
@@ -90,7 +135,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "manifest_theme_color",
-      "community": 0,
+      "community": 1,
       "norm_label": "theme_color"
     },
     {
@@ -100,7 +145,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "manifest_orientation",
-      "community": 0,
+      "community": 1,
       "norm_label": "orientation"
     },
     {
@@ -110,18 +155,108 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "manifest_icons",
-      "community": 0,
+      "community": 1,
       "norm_label": "icons"
     },
     {
-      "label": "index.ts",
+      "label": "auth_setup.sql",
+      "file_type": "code",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "supabase_auth_setup",
+      "community": 5,
+      "norm_label": "auth_setup.sql"
+    },
+    {
+      "label": "public.profiles",
+      "file_type": "code",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "supabase_auth_setup_public_profiles",
+      "community": 5,
+      "norm_label": "public.profiles"
+    },
+    {
+      "label": "public.personas",
+      "file_type": "code",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "supabase_auth_setup_public_personas",
+      "community": 5,
+      "norm_label": "public.personas"
+    },
+    {
+      "label": "public.compras",
+      "file_type": "code",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L60",
+      "_origin": "ast",
+      "id": "supabase_auth_setup_public_compras",
+      "community": 5,
+      "norm_label": "public.compras"
+    },
+    {
+      "label": "public.pagos",
+      "file_type": "code",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L82",
+      "_origin": "ast",
+      "id": "supabase_auth_setup_public_pagos",
+      "community": 5,
+      "norm_label": "public.pagos"
+    },
+    {
+      "label": "public.reservas",
+      "file_type": "code",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L104",
+      "_origin": "ast",
+      "id": "supabase_auth_setup_public_reservas",
+      "community": 5,
+      "norm_label": "public.reservas"
+    },
+    {
+      "label": "public.compra_participantes",
+      "file_type": "code",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L126",
+      "_origin": "ast",
+      "id": "supabase_auth_setup_public_compra_participantes",
+      "community": 5,
+      "norm_label": "public.compra_participantes"
+    },
+    {
+      "label": "public.push_subscriptions",
+      "file_type": "code",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L148",
+      "_origin": "ast",
+      "id": "supabase_auth_setup_public_push_subscriptions",
+      "community": 5,
+      "norm_label": "public.push_subscriptions"
+    },
+    {
+      "label": "cron.sql",
+      "file_type": "code",
+      "source_file": "supabase/cron.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "supabase_cron",
+      "community": 14,
+      "norm_label": "cron.sql"
+    },
+    {
+      "label": "send-payment-reminders/index.ts",
       "file_type": "code",
       "source_file": "supabase/functions/send-payment-reminders/index.ts",
       "source_location": "L1",
       "_origin": "ast",
       "id": "supabase_functions_send_payment_reminders_index",
-      "community": 5,
-      "norm_label": "index.ts"
+      "community": 9,
+      "norm_label": "send-payment-reminders/index.ts"
     },
     {
       "label": "sb",
@@ -130,7 +265,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "supabase_functions_send_payment_reminders_index_sb",
-      "community": 5,
+      "community": 9,
       "norm_label": "sb"
     },
     {
@@ -140,8 +275,358 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "supabase_functions_send_payment_reminders_index_startoftoday",
-      "community": 5,
+      "community": 9,
       "norm_label": "startoftoday()"
+    },
+    {
+      "label": "travel-assistant/index.ts",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index",
+      "community": 3,
+      "norm_label": "travel-assistant/index.ts"
+    },
+    {
+      "label": "sb",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L34",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_sb",
+      "community": 3,
+      "norm_label": "sb"
+    },
+    {
+      "label": "CORS_HEADERS",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L36",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_cors_headers",
+      "community": 3,
+      "norm_label": "cors_headers"
+    },
+    {
+      "label": "json()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L42",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_json",
+      "community": 8,
+      "norm_label": "json()"
+    },
+    {
+      "label": "Row",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L50",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_row",
+      "community": 3,
+      "norm_label": "row"
+    },
+    {
+      "label": "TripData",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_tripdata",
+      "community": 3,
+      "norm_label": "tripdata"
+    },
+    {
+      "label": "loadTripData()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L56",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_loadtripdata",
+      "community": 3,
+      "norm_label": "loadtripdata()"
+    },
+    {
+      "label": "classifyCategory()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L74",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_classifycategory",
+      "community": 7,
+      "norm_label": "classifycategory()"
+    },
+    {
+      "label": "compraFinancials()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L85",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_comprafinancials",
+      "community": 6,
+      "norm_label": "comprafinancials()"
+    },
+    {
+      "label": "reservaFinancials()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L99",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_reservafinancials",
+      "community": 6,
+      "norm_label": "reservafinancials()"
+    },
+    {
+      "label": "MONTH_NUM",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L118",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_month_num",
+      "community": 3,
+      "norm_label": "month_num"
+    },
+    {
+      "label": "activityDateISO()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L122",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_activitydateiso",
+      "community": 7,
+      "norm_label": "activitydateiso()"
+    },
+    {
+      "label": "AssistantItem",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L133",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_assistantitem",
+      "community": 3,
+      "norm_label": "assistantitem"
+    },
+    {
+      "label": "ToolResult",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L134",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_toolresult",
+      "community": 3,
+      "norm_label": "toolresult"
+    },
+    {
+      "label": "ToolDef",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L135",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_tooldef",
+      "community": 3,
+      "norm_label": "tooldef"
+    },
+    {
+      "label": "fmtCOP()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L143",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_fmtcop",
+      "community": 6,
+      "norm_label": "fmtcop()"
+    },
+    {
+      "label": "toolTripOverview()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L145",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_tooltripoverview",
+      "community": 7,
+      "norm_label": "tooltripoverview()"
+    },
+    {
+      "label": "toolListActivities()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L177",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_toollistactivities",
+      "community": 7,
+      "norm_label": "toollistactivities()"
+    },
+    {
+      "label": "toolListReservations()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L194",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_toollistreservations",
+      "community": 6,
+      "norm_label": "toollistreservations()"
+    },
+    {
+      "label": "toolSpendingSummary()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L214",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_toolspendingsummary",
+      "community": 6,
+      "norm_label": "toolspendingsummary()"
+    },
+    {
+      "label": "toolUpcomingPayments()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L242",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_toolupcomingpayments",
+      "community": 6,
+      "norm_label": "toolupcomingpayments()"
+    },
+    {
+      "label": "toolDetectInsights()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L268",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_tooldetectinsights",
+      "community": 7,
+      "norm_label": "tooldetectinsights()"
+    },
+    {
+      "label": "TOOLS",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L331",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_tools",
+      "community": 8,
+      "norm_label": "tools"
+    },
+    {
+      "label": "callGemini()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L367",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_callgemini",
+      "community": 8,
+      "norm_label": "callgemini()"
+    },
+    {
+      "label": "toolDeclarations()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L377",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_tooldeclarations",
+      "community": 8,
+      "norm_label": "tooldeclarations()"
+    },
+    {
+      "label": "answerQuestion()",
+      "file_type": "code",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L381",
+      "_origin": "ast",
+      "id": "supabase_functions_travel_assistant_index_answerquestion",
+      "community": 8,
+      "norm_label": "answerquestion()"
+    },
+    {
+      "label": "phase1_audit.sql",
+      "file_type": "code",
+      "source_file": "supabase/phase1_audit.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "supabase_phase1_audit",
+      "community": 15,
+      "norm_label": "phase1_audit.sql"
+    },
+    {
+      "label": "phase1_backfill.sql",
+      "file_type": "code",
+      "source_file": "supabase/phase1_backfill.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "supabase_phase1_backfill",
+      "community": 16,
+      "norm_label": "phase1_backfill.sql"
+    },
+    {
+      "label": "phase1_drop_legacy_columns.sql",
+      "file_type": "code",
+      "source_file": "supabase/phase1_drop_legacy_columns.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "supabase_phase1_drop_legacy_columns",
+      "community": 10,
+      "norm_label": "phase1_drop_legacy_columns.sql"
+    },
+    {
+      "label": "public.reservas",
+      "file_type": "code",
+      "source_file": "supabase/phase1_drop_legacy_columns.sql",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "supabase_phase1_drop_legacy_columns_public_reservas",
+      "community": 10,
+      "norm_label": "public.reservas"
+    },
+    {
+      "label": "phase8_drop_legacy_vacaciones.sql",
+      "file_type": "code",
+      "source_file": "supabase/phase8_drop_legacy_vacaciones.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "supabase_phase8_drop_legacy_vacaciones",
+      "community": 11,
+      "norm_label": "phase8_drop_legacy_vacaciones.sql"
+    },
+    {
+      "label": "public.actividades",
+      "file_type": "code",
+      "source_file": "supabase/phase8_drop_legacy_vacaciones.sql",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "supabase_phase8_drop_legacy_vacaciones_public_actividades",
+      "community": 11,
+      "norm_label": "public.actividades"
+    },
+    {
+      "label": "phase8_normalize_actividades.sql",
+      "file_type": "code",
+      "source_file": "supabase/phase8_normalize_actividades.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "supabase_phase8_normalize_actividades",
+      "community": 17,
+      "norm_label": "phase8_normalize_actividades.sql"
+    },
+    {
+      "label": "schema.sql",
+      "file_type": "code",
+      "source_file": "supabase/schema.sql",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "supabase_schema",
+      "community": 12,
+      "norm_label": "schema.sql"
+    },
+    {
+      "label": "public.push_subscriptions",
+      "file_type": "code",
+      "source_file": "supabase/schema.sql",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "supabase_schema_public_push_subscriptions",
+      "community": 12,
+      "norm_label": "public.push_subscriptions"
     },
     {
       "label": "sw.js",
@@ -150,7 +635,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "sw",
-      "community": 6,
+      "community": 13,
       "norm_label": "sw.js"
     },
     {
@@ -160,340 +645,411 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "sw_assets",
-      "community": 6,
+      "community": 13,
       "norm_label": "assets"
     },
     {
-      "label": "PUSH_SETUP.md",
-      "type": "file",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "top"
-      },
-      "confidence": 1.0,
+      "label": "AI Travel Assistant (Gemini)",
       "file_type": "concept",
-      "id": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-      "community": 4,
-      "norm_label": "push_setup.md"
-    },
-    {
-      "label": "index.html",
-      "type": "file",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
-        "pointer": "<head> / top"
-      },
-      "confidence": 1.0,
-      "file_type": "concept",
-      "id": "file:/Users/vale/Documents/Python/europa-2026/index.html",
-      "community": 3,
-      "norm_label": "index.html"
-    },
-    {
-      "label": "Generate VAPID keys",
-      "type": "section",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "## 1. Generate your VAPID keys"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "section:PUSH_SETUP:generate-vapid-keys",
-      "community": 4,
-      "norm_label": "generate vapid keys"
-    },
-    {
-      "label": "Put the public key in the app",
-      "type": "section",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "## 2. Put the public key in the app"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "section:PUSH_SETUP:put-public-key",
-      "community": 1,
-      "norm_label": "put the public key in the app"
-    },
-    {
-      "label": "Create the subscriptions table",
-      "type": "section",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "## 3. Create the subscriptions table"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "section:PUSH_SETUP:create-subscriptions-table",
-      "community": 4,
-      "norm_label": "create the subscriptions table"
-    },
-    {
-      "label": "Deploy the Edge Function",
-      "type": "section",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "## 4. Deploy the Edge Function"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "section:PUSH_SETUP:deploy-edge-function",
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_ai_travel_assistant",
       "community": 2,
-      "norm_label": "deploy the edge function"
+      "norm_label": "ai travel assistant (gemini)"
     },
     {
-      "label": "Set the function secrets",
-      "type": "section",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "## 5. Set the function secrets"
-      },
-      "confidence": 0.95,
+      "label": "travel-assistant Supabase Edge Function",
       "file_type": "concept",
-      "id": "section:PUSH_SETUP:set-secrets",
-      "community": 1,
-      "norm_label": "set the function secrets"
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_travel_assistant_function",
+      "community": 2,
+      "norm_label": "travel-assistant supabase edge function"
     },
     {
-      "label": "Schedule it daily",
-      "type": "section",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "## 6. Schedule it daily"
-      },
-      "confidence": 0.95,
+      "label": "Gemini API Key",
       "file_type": "concept",
-      "id": "section:PUSH_SETUP:schedule-daily",
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_gemini_api_key",
+      "community": 2,
+      "norm_label": "gemini api key"
+    },
+    {
+      "label": "GEMINI_MODEL Secret (gemini-2.5-flash / gemini-2.5-flash-lite)",
+      "file_type": "concept",
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_gemini_model_secret",
+      "community": 2,
+      "norm_label": "gemini_model secret (gemini-2.5-flash / gemini-2.5-flash-lite)"
+    },
+    {
+      "label": "Auto-provided SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY",
+      "file_type": "concept",
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_supabase_secrets",
+      "community": 2,
+      "norm_label": "auto-provided supabase_url / supabase_service_role_key"
+    },
+    {
+      "label": "Rationale: Gemini free tier is sufficient for personal use",
+      "file_type": "rationale",
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_gemini_free_tier_rationale",
+      "community": 2,
+      "norm_label": "rationale: gemini free tier is sufficient for personal use"
+    },
+    {
+      "label": "Rationale: assistant is read-only so it's safe for any visitor",
+      "file_type": "rationale",
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_read_only_design_rationale",
+      "community": 2,
+      "norm_label": "rationale: assistant is read-only so it's safe for any visitor"
+    },
+    {
+      "label": "Rationale: interest/fees and precise inter-city travel time are intentionally out of scope",
+      "file_type": "rationale",
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_scope_limitations_rationale",
+      "community": 2,
+      "norm_label": "rationale: interest/fees and precise inter-city travel time are intentionally out of scope"
+    },
+    {
+      "label": "Rationale: Verify JWT left ON since the app calls the function with the anon key",
+      "file_type": "rationale",
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "ai_assistant_setup_jwt_verify_rationale",
+      "community": 2,
+      "norm_label": "rationale: verify jwt left on since the app calls the function with the anon key"
+    },
+    {
+      "label": "Background Payment Notifications (Web Push)",
+      "file_type": "concept",
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "push_setup_web_push",
       "community": 4,
-      "norm_label": "schedule it daily"
+      "norm_label": "background payment notifications (web push)"
     },
     {
-      "label": "VAPID_PUBLIC_KEY",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Secrets table / Step 5; step 2 instructs pasting into index.html"
-      },
-      "confidence": 0.95,
+      "label": "VAPID Public/Private Keys",
       "file_type": "concept",
-      "id": "config:VAPID_PUBLIC_KEY",
-      "community": 1,
-      "norm_label": "vapid_public_key"
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "push_setup_vapid_keys",
+      "community": 4,
+      "norm_label": "vapid public/private keys"
     },
     {
-      "label": "VAPID_PRIVATE_KEY",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Secrets table / Step 5"
-      },
-      "confidence": 0.95,
+      "label": "send-payment-reminders Supabase Edge Function",
       "file_type": "concept",
-      "id": "config:VAPID_PRIVATE_KEY",
-      "community": 1,
-      "norm_label": "vapid_private_key"
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "push_setup_send_payment_reminders_function",
+      "community": 4,
+      "norm_label": "send-payment-reminders supabase edge function"
     },
     {
-      "label": "VAPID_SUBJECT",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Secrets table / Step 5"
-      },
-      "confidence": 0.95,
+      "label": "Push Subscriptions Table (supabase/schema.sql)",
       "file_type": "concept",
-      "id": "config:VAPID_SUBJECT",
-      "community": 1,
-      "norm_label": "vapid_subject"
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "push_setup_subscriptions_table",
+      "community": 4,
+      "norm_label": "push subscriptions table (supabase/schema.sql)"
     },
     {
-      "label": "CRON_SECRET",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Secrets table / Step 5"
-      },
-      "confidence": 0.95,
+      "label": "Daily Cron Schedule (supabase/cron.sql, 13:00 UTC)",
       "file_type": "concept",
-      "id": "config:CRON_SECRET",
-      "community": 2,
-      "norm_label": "cron_secret"
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "push_setup_cron_schedule",
+      "community": 4,
+      "norm_label": "daily cron schedule (supabase/cron.sql, 13:00 utc)"
     },
     {
-      "label": "REMINDER_TZ",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Secrets table / Step 5 (optional)"
-      },
-      "confidence": 0.9,
+      "label": "iPhone Home Screen Install Requirement",
       "file_type": "concept",
-      "id": "config:REMINDER_TZ",
-      "community": 7,
-      "norm_label": "reminder_tz"
-    },
-    {
-      "label": "SUPABASE_URL",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Step 5 note: provided automatically"
-      },
-      "confidence": 0.9,
-      "file_type": "concept",
-      "id": "config:SUPABASE_URL",
-      "community": 9,
-      "norm_label": "supabase_url"
-    },
-    {
-      "label": "SUPABASE_SERVICE_ROLE_KEY",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Step 5 note: provided automatically"
-      },
-      "confidence": 0.9,
-      "file_type": "concept",
-      "id": "config:SUPABASE_SERVICE_ROLE_KEY",
-      "community": 8,
-      "norm_label": "supabase_service_role_key"
-    },
-    {
-      "label": "send-payment-reminders",
-      "type": "function",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Step 4: deploy function with this exact name"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "function:send-payment-reminders",
-      "community": 2,
-      "norm_label": "send-payment-reminders"
-    },
-    {
-      "label": "cron: '0 13 * * *' (daily at 13:00 UTC)",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "Step 6: cron expression '0 13 * * *'"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "config:cron:0_13_*_*_*",
-      "community": 2,
-      "norm_label": "cron: '0 13 * * *' (daily at 13:00 utc)"
-    },
-    {
-      "label": "iPhone Home Screen install requirement",
-      "type": "entity",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "iPhone requirement note (installed to Home Screen)"
-      },
-      "confidence": 0.9,
-      "file_type": "concept",
-      "id": "entity:iphone-home-screen-requirement",
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "push_setup_pwa_ios_requirement",
       "community": 4,
       "norm_label": "iphone home screen install requirement"
     },
     {
-      "label": "Supabase functions endpoint (example)",
-      "type": "entity",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-        "pointer": "curl example calling /functions/v1/send-payment-reminders"
-      },
-      "confidence": 0.9,
-      "file_type": "concept",
-      "id": "entity:curl-endpoint-send-payment-reminders",
+      "label": "Rationale: iOS only delivers web push to installed PWAs, never a Safari tab",
+      "file_type": "rationale",
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "push_setup_ios_pwa_rationale",
+      "community": 4,
+      "norm_label": "rationale: ios only delivers web push to installed pwas, never a safari tab"
+    },
+    {
+      "label": "Rationale: Verify JWT turned off since function is protected by CRON_SECRET instead",
+      "file_type": "rationale",
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "push_setup_jwt_secret_rationale",
+      "community": 4,
+      "norm_label": "rationale: verify jwt turned off since function is protected by cron_secret instead"
+    },
+    {
+      "label": "Europa 2026 \u00b7 Valeria (trip planner SPA)",
+      "file_type": "document",
+      "source_file": "index.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_europa_2026_app",
+      "community": 0,
+      "norm_label": "europa 2026 \u00b7 valeria (trip planner spa)"
+    },
+    {
+      "label": "Supabase Client Init (sb = supabase.createClient)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 1911-1913",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_supabase_client",
       "community": 2,
-      "norm_label": "supabase functions endpoint (example)"
+      "norm_label": "supabase client init (sb = supabase.createclient)"
     },
     {
-      "label": "index.html VAPID_PUBLIC_KEY placeholder",
-      "type": "config",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
-        "pointer": "const VAPID_PUBLIC_KEY = ''; // placeholder"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "config:index:VAPID_PUBLIC_KEY_placeholder",
-      "community": 1,
-      "norm_label": "index.html vapid_public_key placeholder"
+      "label": "Floating AI Assistant Panel (askAssistant/openAssistant/renderAssistantResponse)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 5334-5410",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_ai_assistant_panel",
+      "community": 0,
+      "norm_label": "floating ai assistant panel (askassistant/openassistant/renderassistantresponse)"
     },
     {
-      "label": "manifest.json (linked)",
-      "type": "entity",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
-        "pointer": "<link rel=\"manifest\" href=\"manifest.json\">"
-      },
-      "confidence": 0.9,
-      "file_type": "concept",
-      "id": "entity:index:manifest-link",
-      "community": 3,
-      "norm_label": "manifest.json (linked)"
+      "label": "registerPushSubscription() / VAPID_PUBLIC_KEY",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 5173-5210",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_push_registration",
+      "community": 0,
+      "norm_label": "registerpushsubscription() / vapid_public_key"
     },
     {
-      "label": "#map (map container)",
-      "type": "entity",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
-        "pointer": "#map CSS / element in page"
-      },
-      "confidence": 0.85,
-      "file_type": "concept",
-      "id": "entity:index:map-element",
-      "community": 3,
-      "norm_label": "#map (map container)"
+      "label": "Embedded Trip DATA (cityOrder, cityCoords, records)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 1908",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_trip_data",
+      "community": 0,
+      "norm_label": "embedded trip data (cityorder, citycoords, records)"
     },
     {
-      "label": "@supabase/supabase-js (script import)",
-      "type": "entity",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
-        "pointer": "<script src=\"...supabase-js@2...\"></script>"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "entity:index:supabase-js",
-      "community": 3,
-      "norm_label": "@supabase/supabase-js (script import)"
+      "label": "View Navigation (switchView/navigate/switchItinSub/switchFinSub)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 4543-4629",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_view_navigation",
+      "community": 0,
+      "norm_label": "view navigation (switchview/navigate/switchitinsub/switchfinsub)"
     },
     {
-      "label": "Leaflet CSS (import)",
-      "type": "entity",
-      "source_location": {
-        "path": "/Users/vale/Documents/Python/europa-2026/index.html",
-        "pointer": "<link rel=\"stylesheet\" href=\"...leaflet.css\">"
-      },
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "entity:index:leaflet-css",
-      "community": 3,
-      "norm_label": "leaflet css (import)"
+      "label": "Service Worker Registration (sw.js)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 5160-5165",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_service_worker_registration",
+      "community": 0,
+      "norm_label": "service worker registration (sw.js)"
     },
     {
-      "label": "icon.svg",
-      "type": "image",
-      "source_location": "/Users/vale/Documents/Python/europa-2026/icon.svg#L1-L4",
-      "confidence": 0.9,
-      "file_type": "concept",
-      "id": "icon.svg#node:0",
-      "community": 10,
-      "norm_label": "icon.svg"
+      "label": "Leaflet Map Rendering (renderMap/cityDetailMap/dashMiniMap/cronoMap)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 2421-2585",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_leaflet_map",
+      "community": 0,
+      "norm_label": "leaflet map rendering (rendermap/citydetailmap/dashminimap/cronomap)"
     },
     {
-      "label": "\ud83c\udf0d",
-      "type": "text",
-      "source_location": "/Users/vale/Documents/Python/europa-2026/icon.svg#L3",
-      "confidence": 0.95,
-      "file_type": "concept",
-      "id": "icon.svg#node:1",
-      "community": 11,
-      "norm_label": "\ud83c\udf0d"
+      "label": "Chart.js Financial Charts (finBarChart/finDoughnut/finStackedBarChart/buildMonthlyChart)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 3661-4469",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_chartjs_charts",
+      "community": 0,
+      "norm_label": "chart.js financial charts (finbarchart/findoughnut/finstackedbarchart/buildmonthlychart)"
+    },
+    {
+      "label": "Light/Dark Theme Toggle (localStorage europa_theme)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 13-21, 4698-4724",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_theme_toggle",
+      "community": 0,
+      "norm_label": "light/dark theme toggle (localstorage europa_theme)"
+    },
+    {
+      "label": "Auth System (initAuth/handleLogin/logout/checkAdminPermission)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 1920-2058",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_auth_system",
+      "community": 0,
+      "norm_label": "auth system (initauth/handlelogin/logout/checkadminpermission)"
+    },
+    {
+      "label": "Finanzas/Pagos Module (compras, pagos, participantes, renderFinDashboard)",
+      "file_type": "code",
+      "source_file": "index.html",
+      "source_location": "line 3466-4536",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_finanzas_pagos",
+      "community": 0,
+      "norm_label": "finanzas/pagos module (compras, pagos, participantes, renderfindashboard)"
+    },
+    {
+      "label": "Rationale: single shared navigation dispatcher (runNavAction) avoids competing implementations",
+      "file_type": "rationale",
+      "source_file": "index.html",
+      "source_location": "line 5397-5410",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "index_run_nav_action_rationale",
+      "community": 0,
+      "norm_label": "rationale: single shared navigation dispatcher (runnavaction) avoids competing implementations"
+    },
+    {
+      "label": "App Icon (orange rounded square with globe emoji)",
+      "file_type": "image",
+      "source_file": "icon.svg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "icon_app_icon",
+      "community": 0,
+      "norm_label": "app icon (orange rounded square with globe emoji)"
     }
   ],
   "links": [
@@ -503,6 +1059,7 @@
       "source_file": "manifest.json",
       "source_location": "L8",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_background_color",
       "confidence_score": 1.0
@@ -513,6 +1070,7 @@
       "source_file": "manifest.json",
       "source_location": "L4",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_description",
       "confidence_score": 1.0
@@ -523,6 +1081,7 @@
       "source_file": "manifest.json",
       "source_location": "L7",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_display",
       "confidence_score": 1.0
@@ -533,6 +1092,7 @@
       "source_file": "manifest.json",
       "source_location": "L11",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_icons",
       "confidence_score": 1.0
@@ -543,6 +1103,7 @@
       "source_file": "manifest.json",
       "source_location": "L2",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_name",
       "confidence_score": 1.0
@@ -553,6 +1114,7 @@
       "source_file": "manifest.json",
       "source_location": "L10",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_orientation",
       "confidence_score": 1.0
@@ -563,6 +1125,7 @@
       "source_file": "manifest.json",
       "source_location": "L6",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_scope",
       "confidence_score": 1.0
@@ -573,6 +1136,7 @@
       "source_file": "manifest.json",
       "source_location": "L3",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_short_name",
       "confidence_score": 1.0
@@ -583,6 +1147,7 @@
       "source_file": "manifest.json",
       "source_location": "L5",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_start_url",
       "confidence_score": 1.0
@@ -593,8 +1158,86 @@
       "source_file": "manifest.json",
       "source_location": "L9",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "manifest",
       "target": "manifest_theme_color",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L126",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_auth_setup",
+      "target": "supabase_auth_setup_public_compra_participantes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L60",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_auth_setup",
+      "target": "supabase_auth_setup_public_compras",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L82",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_auth_setup",
+      "target": "supabase_auth_setup_public_pagos",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L38",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_auth_setup",
+      "target": "supabase_auth_setup_public_personas",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_auth_setup",
+      "target": "supabase_auth_setup_public_profiles",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L148",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_auth_setup",
+      "target": "supabase_auth_setup_public_push_subscriptions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/auth_setup.sql",
+      "source_location": "L104",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_auth_setup",
+      "target": "supabase_auth_setup_public_reservas",
       "confidence_score": 1.0
     },
     {
@@ -603,6 +1246,7 @@
       "source_file": "supabase/functions/send-payment-reminders/index.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "supabase_functions_send_payment_reminders_index",
       "target": "supabase_functions_send_payment_reminders_index_sb",
       "confidence_score": 1.0
@@ -613,8 +1257,539 @@
       "source_file": "supabase/functions/send-payment-reminders/index.ts",
       "source_location": "L30",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "supabase_functions_send_payment_reminders_index",
       "target": "supabase_functions_send_payment_reminders_index_startoftoday",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L122",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_activitydateiso",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L381",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_answerquestion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L133",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_assistantitem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L367",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_callgemini",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L74",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_classifycategory",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_comprafinancials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_cors_headers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L143",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_fmtcop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L42",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_json",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L56",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_loadtripdata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L118",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_month_num",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L99",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_reservafinancials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L50",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_row",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L34",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_sb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L377",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_tooldeclarations",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L135",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_tooldef",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "indirect_call",
+      "confidence": "INFERRED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L357",
+      "weight": 1.0,
+      "_origin": "ast",
+      "context": "collection",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_tooldetectinsights",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "indirect_call",
+      "confidence": "INFERRED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L340",
+      "weight": 1.0,
+      "_origin": "ast",
+      "context": "collection",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_toollistactivities",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "indirect_call",
+      "confidence": "INFERRED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L347",
+      "weight": 1.0,
+      "_origin": "ast",
+      "context": "collection",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_toollistreservations",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L134",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_toolresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L331",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_tools",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "indirect_call",
+      "confidence": "INFERRED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L351",
+      "weight": 1.0,
+      "_origin": "ast",
+      "context": "collection",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_toolspendingsummary",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "indirect_call",
+      "confidence": "INFERRED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L334",
+      "weight": 1.0,
+      "_origin": "ast",
+      "context": "collection",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_tooltripoverview",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "indirect_call",
+      "confidence": "INFERRED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L354",
+      "weight": 1.0,
+      "_origin": "ast",
+      "context": "collection",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_toolupcomingpayments",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L51",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index",
+      "target": "supabase_functions_travel_assistant_index_tripdata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L374",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_callgemini",
+      "target": "supabase_functions_travel_assistant_index_json",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L180",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_toollistactivities",
+      "target": "supabase_functions_travel_assistant_index_classifycategory",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L102",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_reservafinancials",
+      "target": "supabase_functions_travel_assistant_index_comprafinancials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L221",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_toolspendingsummary",
+      "target": "supabase_functions_travel_assistant_index_comprafinancials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L301",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_tooldetectinsights",
+      "target": "supabase_functions_travel_assistant_index_reservafinancials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L199",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_toollistreservations",
+      "target": "supabase_functions_travel_assistant_index_reservafinancials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L230",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_toolspendingsummary",
+      "target": "supabase_functions_travel_assistant_index_reservafinancials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L161",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_tooltripoverview",
+      "target": "supabase_functions_travel_assistant_index_reservafinancials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L280",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_tooldetectinsights",
+      "target": "supabase_functions_travel_assistant_index_activitydateiso",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L181",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_toollistactivities",
+      "target": "supabase_functions_travel_assistant_index_activitydateiso",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L146",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_tooltripoverview",
+      "target": "supabase_functions_travel_assistant_index_activitydateiso",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L205",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_toollistreservations",
+      "target": "supabase_functions_travel_assistant_index_fmtcop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L234",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_toolspendingsummary",
+      "target": "supabase_functions_travel_assistant_index_fmtcop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L173",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_tooltripoverview",
+      "target": "supabase_functions_travel_assistant_index_fmtcop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L256",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_toolupcomingpayments",
+      "target": "supabase_functions_travel_assistant_index_fmtcop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L397",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_answerquestion",
+      "target": "supabase_functions_travel_assistant_index_tools"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L382",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_answerquestion",
+      "target": "supabase_functions_travel_assistant_index_callgemini",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/functions/travel-assistant/index.ts",
+      "source_location": "L385",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_functions_travel_assistant_index_answerquestion",
+      "target": "supabase_functions_travel_assistant_index_tooldeclarations",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/phase1_drop_legacy_columns.sql",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_phase1_drop_legacy_columns",
+      "target": "supabase_phase1_drop_legacy_columns_public_reservas",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/phase8_drop_legacy_vacaciones.sql",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_phase8_drop_legacy_vacaciones",
+      "target": "supabase_phase8_drop_legacy_vacaciones_public_actividades",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "supabase/schema.sql",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "supabase_schema",
+      "target": "supabase_schema_public_push_subscriptions",
       "confidence_score": 1.0
     },
     {
@@ -623,179 +1798,475 @@
       "source_file": "sw.js",
       "source_location": "L2",
       "weight": 1.0,
+      "_origin": "ast",
       "source": "sw",
       "target": "sw_assets",
       "confidence_score": 1.0
     },
     {
-      "label": "mentioned-in",
-      "confidence": 0.9,
-      "source_file": "",
-      "source": "entity:iphone-home-screen-requirement",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_ai_travel_assistant",
+      "target": "ai_assistant_setup_gemini_api_key"
     },
     {
-      "label": "is part of",
-      "confidence": 1.0,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:create-subscriptions-table",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-      "confidence_score": 1.0
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_ai_travel_assistant",
+      "target": "ai_assistant_setup_read_only_design_rationale"
     },
     {
-      "label": "is part of",
-      "confidence": 1.0,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:deploy-edge-function",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-      "confidence_score": 1.0
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_ai_travel_assistant",
+      "target": "ai_assistant_setup_scope_limitations_rationale"
     },
     {
-      "label": "is part of",
-      "confidence": 1.0,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:generate-vapid-keys",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_ai_travel_assistant",
+      "target": "ai_assistant_setup_travel_assistant_function"
     },
     {
-      "label": "is part of",
-      "confidence": 1.0,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:put-public-key",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_ai_travel_assistant",
+      "target": "push_setup_web_push"
     },
     {
-      "label": "is part of",
-      "confidence": 1.0,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:schedule-daily",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_travel_assistant_function",
+      "target": "ai_assistant_setup_gemini_api_key"
     },
     {
-      "label": "is part of",
-      "confidence": 1.0,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:set-secrets",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/PUSH_SETUP.md",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_travel_assistant_function",
+      "target": "ai_assistant_setup_gemini_model_secret"
     },
     {
-      "label": "imported-by",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "entity:index:leaflet-css",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
-      "confidence_score": 1.0
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_travel_assistant_function",
+      "target": "ai_assistant_setup_jwt_verify_rationale"
     },
     {
-      "label": "linked-from",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "entity:index:manifest-link",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_travel_assistant_function",
+      "target": "ai_assistant_setup_supabase_secrets"
     },
     {
-      "label": "contained-in",
-      "confidence": 0.9,
-      "source_file": "",
-      "source": "entity:index:map-element",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_travel_assistant_function",
+      "target": "index_ai_assistant_panel"
     },
     {
-      "label": "imported-by",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "entity:index:supabase-js",
-      "target": "file:/Users/vale/Documents/Python/europa-2026/index.html",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_travel_assistant_function",
+      "target": "index_supabase_client"
     },
     {
-      "label": "mentions",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:put-public-key",
-      "target": "config:VAPID_PUBLIC_KEY",
-      "confidence_score": 1.0
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AI_ASSISTANT_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "ai_assistant_setup_gemini_api_key",
+      "target": "ai_assistant_setup_gemini_free_tier_rationale"
     },
     {
-      "label": "mentions",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:deploy-edge-function",
-      "target": "function:send-payment-reminders",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_web_push",
+      "target": "push_setup_cron_schedule"
     },
     {
-      "label": "requires",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:set-secrets",
-      "target": "config:CRON_SECRET",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_web_push",
+      "target": "push_setup_pwa_ios_requirement"
     },
     {
-      "label": "requires",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:set-secrets",
-      "target": "config:VAPID_PRIVATE_KEY",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_web_push",
+      "target": "push_setup_send_payment_reminders_function"
     },
     {
-      "label": "requires",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:set-secrets",
-      "target": "config:VAPID_PUBLIC_KEY",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_web_push",
+      "target": "push_setup_subscriptions_table"
     },
     {
-      "label": "requires",
-      "confidence": 0.95,
-      "source_file": "",
-      "source": "section:PUSH_SETUP:set-secrets",
-      "target": "config:VAPID_SUBJECT",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_web_push",
+      "target": "push_setup_vapid_keys"
     },
     {
-      "label": "placeholder-for",
-      "confidence": 0.98,
-      "source_file": "",
-      "source": "config:index:VAPID_PUBLIC_KEY_placeholder",
-      "target": "config:VAPID_PUBLIC_KEY",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_vapid_keys",
+      "target": "index_push_registration"
     },
     {
-      "label": "used-in (replace YOUR_CRON_SECRET)",
-      "confidence": 0.9,
-      "source_file": "",
-      "source": "config:CRON_SECRET",
-      "target": "config:cron:0_13_*_*_*",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_vapid_keys",
+      "target": "push_setup_send_payment_reminders_function"
     },
     {
-      "label": "triggers",
-      "confidence": 0.9,
-      "source_file": "",
-      "source": "config:cron:0_13_*_*_*",
-      "target": "function:send-payment-reminders",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_cron_schedule",
+      "target": "push_setup_send_payment_reminders_function"
     },
     {
-      "label": "invokes",
-      "confidence": 0.9,
-      "source_file": "",
-      "source": "entity:curl-endpoint-send-payment-reminders",
-      "target": "function:send-payment-reminders",
-      "confidence_score": 1.0
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_send_payment_reminders_function",
+      "target": "index_supabase_client"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_send_payment_reminders_function",
+      "target": "push_setup_jwt_secret_rationale"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_send_payment_reminders_function",
+      "target": "push_setup_subscriptions_table"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "PUSH_SETUP.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "push_setup_pwa_ios_requirement",
+      "target": "push_setup_ios_pwa_rationale"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "line 11",
+      "weight": 1.0,
+      "source": "icon_app_icon",
+      "target": "index_europa_2026_app"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_ai_assistant_panel"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_auth_system"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_chartjs_charts"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_finanzas_pagos"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_leaflet_map"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_push_registration"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_service_worker_registration"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_supabase_client"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_theme_toggle"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_trip_data"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "index_europa_2026_app",
+      "target": "index_view_navigation"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "line 5397-5410",
+      "weight": 1.0,
+      "source": "index_ai_assistant_panel",
+      "target": "index_view_navigation"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "line 5191",
+      "weight": 1.0,
+      "source": "index_push_registration",
+      "target": "index_service_worker_registration"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "line 4598-4611",
+      "weight": 1.0,
+      "source": "index_view_navigation",
+      "target": "index_finanzas_pagos"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "line 4543-4552",
+      "weight": 1.0,
+      "source": "index_view_navigation",
+      "target": "index_leaflet_map"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "line 5395-5397",
+      "weight": 1.0,
+      "source": "index_view_navigation",
+      "target": "index_run_nav_action_rationale"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "line 3466-3588",
+      "weight": 1.0,
+      "source": "index_finanzas_pagos",
+      "target": "index_chartjs_charts"
     }
   ],
-  "hyperedges": [],
-  "built_at_commit": "fd659146558fae771ecd2559542d4b8be55adabd"
+  "hyperedges": [
+    {
+      "id": "supabase_edge_functions_pattern",
+      "label": "Supabase Edge Functions Architecture (client \u2192 travel-assistant / send-payment-reminders)",
+      "nodes": [
+        "ai_assistant_setup_travel_assistant_function",
+        "push_setup_send_payment_reminders_function",
+        "index_supabase_client"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "index.html"
+    },
+    {
+      "id": "spa_view_system",
+      "label": "Europa 2026 Multi-View SPA Structure",
+      "nodes": [
+        "index_view_navigation",
+        "index_trip_data",
+        "index_leaflet_map",
+        "index_chartjs_charts",
+        "index_finanzas_pagos"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html"
+    },
+    {
+      "id": "push_notification_pipeline",
+      "label": "Push Notification Pipeline (subscribe \u2192 store \u2192 cron \u2192 deliver)",
+      "nodes": [
+        "index_push_registration",
+        "index_service_worker_registration",
+        "push_setup_vapid_keys",
+        "push_setup_send_payment_reminders_function"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html"
+    }
+  ],
+  "built_at_commit": "e06cc7f044dd4d7ea9577a4741a345d6c253580f"
 }

@@ -817,6 +817,59 @@
     font-style: italic;
     padding: 6px 0;
   }
+
+  /* Reservation documents ("Documentos" section, shared by .res-card and .city-res-item) */
+  .res-card-docs {
+    flex-basis: 100%; /* wraps to its own row when nested in a flex container like .city-res-item */
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .res-card-docs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .res-card-docs-list { display: flex; flex-direction: column; }
+  .res-doc-row {
+    padding: 6px 0;
+    border-top: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .res-doc-row:first-child { border-top: none; }
+  .res-doc-main { display: flex; align-items: center; gap: 6px; }
+  .res-doc-icon { flex-shrink: 0; font-size: 0.95rem; }
+  .res-doc-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+  }
+  .res-doc-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .res-doc-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+    padding-left: 26px; /* aligns under the name, past the icon */
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+  .res-doc-date { flex-shrink: 0; }
+  .res-doc-offline-indicator { flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res-doc-offline-indicator.offline-ready { color: var(--vacation); }
+  .res-docs-empty {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-style: italic;
+    padding: 4px 0;
+  }
   .pay-badge {
     display: inline-flex;
     align-items: center;
@@ -961,6 +1014,7 @@
     padding: 12px 14px;
     margin-bottom: 8px;
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     align-items: flex-start;
   }
@@ -1880,6 +1934,17 @@
   </div>
 </div>
 
+<!-- DOCUMENT PREVIEW MODAL -->
+<div class="modal-overlay hidden" id="docPreviewOverlay">
+  <div class="modal" style="max-width:800px;">
+    <h3>
+      <span id="docPreviewTitle">Documento</span>
+      <button class="modal-close" id="docPreviewClose">✕</button>
+    </h3>
+    <div id="docPreviewBody"></div>
+  </div>
+</div>
+
 <!-- AI TRAVEL ASSISTANT (floating, available on every view) -->
 <button id="assistantFab" class="assistant-fab" aria-label="Asistente de viaje" title="Asistente de viaje">🤖</button>
 <div id="assistantPanel" class="assistant-panel hidden">
@@ -1960,6 +2025,15 @@ function updateAuthUI() {
     authBtn.textContent = '🔓 Sin autenticar';
     authBtn.title = 'Haz clic para iniciar sesión con email y contraseña';
     if (editMode) editMode.textContent = '👁️ View Mode (Public)';
+  }
+
+  // Documento upload/replace/delete controls are only ever emitted into the
+  // HTML for admins (see buildDocumentsSectionHTML), so a login/logout must
+  // re-render whichever reservation view is currently on screen for those
+  // controls to actually appear/disappear.
+  if (currentView === 'finanzas' && finSubView === 'reservations') renderReservations();
+  if (currentView === 'city-detail' && currentCity) {
+    renderCityReservationsList(currentCity, DATA.reservations.filter(r => r.ciudad === currentCity));
   }
 }
 
@@ -2129,6 +2203,71 @@ async function dbDeleteReservation(id) {
   const { error } = await sb.from('reservas').delete().eq('id', id);
   if (error) throw error;
 }
+
+// ── Reservation documents (Storage: 'travel-documents' bucket) ────────────────
+const DOC_ALLOWED_TYPES = { 'application/pdf': 'pdf', 'image/png': 'image', 'image/jpeg': 'image' };
+const DOC_MAX_BYTES = 10 * 1024 * 1024; // 10MB — matches the bucket's file_size_limit
+const DOC_CACHE_NAME = 'europa-2026-documents-v1'; // must match sw.js's DOC_CACHE
+
+async function dbLoadDocuments() {
+  const { data, error } = await sb.from('reserva_documentos').select('*').order('created_at');
+  if (error) throw error;
+  return data || [];
+}
+async function dbInsertDocumentRow(doc) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
+  const { data, error } = await sb.from('reserva_documentos').insert([doc]).select().single();
+  if (error) throw error;
+  return data;
+}
+async function dbDeleteDocumentRow(id) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
+  const { error } = await sb.from('reserva_documentos').delete().eq('id', id);
+  if (error) throw error;
+}
+
+function reservationDocumentUrl(storagePath) {
+  return sb.storage.from('travel-documents').getPublicUrl(storagePath).data.publicUrl;
+}
+
+async function uploadReservationDocument(reservationId, file) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
+  const docType = DOC_ALLOWED_TYPES[file.type];
+  if (!docType) throw new Error('Tipo de archivo no permitido. Solo se aceptan PDF, PNG o JPG.');
+  if (file.size > DOC_MAX_BYTES) throw new Error('El archivo supera el tamaño máximo permitido (10MB).');
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `${reservationId}/${crypto.randomUUID()}-${safeName}`;
+  const { error: upErr } = await sb.storage.from('travel-documents').upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) throw new Error('No se pudo subir el archivo: ' + upErr.message);
+
+  return dbInsertDocumentRow({
+    reservation_id: reservationId,
+    file_name: file.name,
+    storage_path: path,
+    mime_type: file.type,
+    file_size: file.size,
+    document_type: docType,
+    uploaded_by: currentUser?.id || null,
+  });
+}
+
+async function replaceReservationDocument(existingDoc, file) {
+  // Upload the new file first, then remove the old one — a failed replace
+  // never leaves the reservation with zero documents.
+  const fresh = await uploadReservationDocument(existingDoc.reservation_id, file);
+  try { await sb.storage.from('travel-documents').remove([existingDoc.storage_path]); } catch (_) {}
+  await dbDeleteDocumentRow(existingDoc.id);
+  return fresh;
+}
+
+async function deleteReservationDocument(doc) {
+  if (!checkAdminPermission()) throw new Error('Permission denied');
+  const { error: rmErr } = await sb.storage.from('travel-documents').remove([doc.storage_path]);
+  if (rmErr) throw rmErr;
+  await dbDeleteDocumentRow(doc.id);
+}
+
 async function dbLoadCompras() {
   const { data, error } = await sb.from('compras').select('*').order('fecha_pago');
   if (error) throw error;
@@ -2152,6 +2291,7 @@ async function dbLoadParticipantes() {
 
 // ── Data init ─────────────────────────────────────────────────────────────────
 DATA.reservations = [];
+DATA.documents = new Map(); // reservation_id -> reserva_documentos[]
 let pagosData = { compras: [], pagos: [], personas: [], participantes: [] };
 let pagosLoaded = false;
 // Load payment tables once (shared by Home chart + Finanzas). Swallows errors.
@@ -2300,6 +2440,15 @@ async function checkAndSeedDatabase() {
     reservas = await dbLoadReservations();
   }
   DATA.reservations = reservas;
+
+  try {
+    const docs = await dbLoadDocuments();
+    DATA.documents = new Map();
+    docs.forEach(d => {
+      if (!DATA.documents.has(d.reservation_id)) DATA.documents.set(d.reservation_id, []);
+      DATA.documents.get(d.reservation_id).push(d);
+    });
+  } catch (e) { console.warn('Reservation documents load failed:', e.message); }
 
   if (loadMsg) loadMsg.textContent = 'Cargando datos…';
 }
@@ -2737,6 +2886,155 @@ function renderCityBudget(city, cityRecords) {
   }
 }
 
+// ── Reservation documents UI (shared between .res-card and .city-res-item) ───
+function buildDocumentsSectionHTML(reservationId) {
+  const docs = DATA.documents.get(reservationId) || [];
+  const uploadBtn = isAdmin ? `<button type="button" class="icon-btn doc-upload-btn" title="Subir documento">📤</button>` : '';
+  const rows = docs.length === 0
+    ? '<p class="res-docs-empty">No hay documentos disponibles.</p>'
+    : docs.map(doc => {
+        const icon = doc.document_type === 'pdf' ? '📄' : doc.document_type === 'image' ? '🖼️' : '📎';
+        const date = doc.created_at ? new Date(doc.created_at).toLocaleDateString('es-CO') : '';
+        const adminBtns = isAdmin ? `
+            <button type="button" class="icon-btn doc-replace-btn" title="Reemplazar">🔄</button>
+            <button type="button" class="icon-btn danger doc-delete-btn" title="Eliminar">🗑</button>` : '';
+        return `
+        <div class="res-doc-row" data-doc-id="${doc.id}">
+          <div class="res-doc-main">
+            <span class="res-doc-icon">${icon}</span>
+            <span class="res-doc-name" title="${doc.file_name}">${doc.file_name}</span>
+            <div class="res-doc-actions">
+              <button type="button" class="icon-btn doc-view-btn" title="Ver">👁</button>
+              <button type="button" class="icon-btn doc-download-btn" title="Descargar">⬇</button>${adminBtns}
+            </div>
+          </div>
+          <div class="res-doc-meta">
+            <span class="res-doc-date">${date}</span>
+            <span class="res-doc-offline-indicator" data-storage-path="${doc.storage_path}">☁ Disponible solo en línea</span>
+          </div>
+        </div>`;
+      }).join('');
+  return `
+    <div class="res-card-docs">
+      <div class="res-card-docs-header">
+        <span>📎 Documentos</span>
+        ${uploadBtn}
+      </div>
+      <div class="res-card-docs-list">${rows}</div>
+      <input type="file" class="doc-file-input hidden" accept="application/pdf,image/png,image/jpeg">
+    </div>`;
+}
+
+function wireDocumentsSection(containerEl, reservationId, refreshFn) {
+  const fileInput = containerEl.querySelector('.doc-file-input');
+  let replaceTarget = null;
+
+  const uploadBtn = containerEl.querySelector('.doc-upload-btn');
+  if (uploadBtn) uploadBtn.onclick = () => { replaceTarget = null; fileInput.click(); };
+
+  if (fileInput) {
+    fileInput.onchange = async () => {
+      const file = fileInput.files[0];
+      fileInput.value = '';
+      if (!file) return;
+      try {
+        if (replaceTarget) await replaceReservationDocument(replaceTarget, file);
+        else await uploadReservationDocument(reservationId, file);
+        refreshFn();
+      } catch (err) { alert('❌ ' + err.message); }
+    };
+  }
+
+  const docs = DATA.documents.get(reservationId) || [];
+  containerEl.querySelectorAll('.res-doc-row').forEach(row => {
+    const doc = docs.find(d => d.id === Number(row.dataset.docId));
+    if (!doc) return;
+    const viewBtn = row.querySelector('.doc-view-btn');
+    const dlBtn = row.querySelector('.doc-download-btn');
+    const replaceBtn = row.querySelector('.doc-replace-btn');
+    const delBtn = row.querySelector('.doc-delete-btn');
+    if (viewBtn) viewBtn.onclick = () => previewDocument(doc);
+    if (dlBtn) dlBtn.onclick = () => downloadDocument(doc);
+    if (replaceBtn) replaceBtn.onclick = () => { replaceTarget = doc; fileInput.click(); };
+    if (delBtn) delBtn.onclick = async () => {
+      if (!confirm(`¿Eliminar "${doc.file_name}"?`)) return;
+      try { await deleteReservationDocument(doc); refreshFn(); }
+      catch (err) { alert('❌ ' + err.message); }
+    };
+  });
+
+  refreshOfflineIndicators(containerEl);
+}
+
+async function ensureDocumentAvailable(url) {
+  try {
+    const resp = await fetch(url);
+    return resp.ok;
+  } catch (_) { return false; }
+}
+
+function markDocumentCachedIndicators(storagePath) {
+  document.querySelectorAll(`.res-doc-offline-indicator[data-storage-path="${CSS.escape(storagePath)}"]`)
+    .forEach(el => { el.textContent = '✔ Disponible sin conexión'; el.classList.add('offline-ready'); });
+}
+
+async function isDocumentCachedOffline(storagePath) {
+  if (!('caches' in window)) return false;
+  try {
+    const cache = await caches.open(DOC_CACHE_NAME);
+    return !!(await cache.match(reservationDocumentUrl(storagePath)));
+  } catch (_) { return false; }
+}
+
+async function refreshOfflineIndicators(containerEl) {
+  const indicators = containerEl.querySelectorAll('.res-doc-offline-indicator');
+  for (const el of indicators) {
+    const cached = await isDocumentCachedOffline(el.dataset.storagePath);
+    el.textContent = cached ? '✔ Disponible sin conexión' : '☁ Disponible solo en línea';
+    el.classList.toggle('offline-ready', cached);
+  }
+}
+
+async function previewDocument(doc) {
+  const url = reservationDocumentUrl(doc.storage_path);
+  const overlay = document.getElementById('docPreviewOverlay');
+  const body = document.getElementById('docPreviewBody');
+  document.getElementById('docPreviewTitle').textContent = doc.file_name;
+  body.innerHTML = '<p class="res-docs-empty">Cargando…</p>';
+  overlay.classList.remove('hidden');
+
+  const available = await ensureDocumentAvailable(url);
+  if (!available) {
+    body.innerHTML = '<p class="res-docs-empty">📡 Este documento no está disponible sin conexión. Conéctate a internet para verlo por primera vez.</p>';
+    return;
+  }
+  markDocumentCachedIndicators(doc.storage_path);
+  if (doc.mime_type === 'application/pdf') {
+    body.innerHTML = `<iframe src="${url}" style="width:100%;height:70vh;border:none;border-radius:8px;background:var(--surface-2);"></iframe>`;
+  } else if (doc.mime_type === 'image/png' || doc.mime_type === 'image/jpeg') {
+    body.innerHTML = `<img src="${url}" style="max-width:100%;max-height:70vh;display:block;margin:0 auto;border-radius:8px;">`;
+  } else {
+    overlay.classList.add('hidden');
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
+async function downloadDocument(doc) {
+  const url = reservationDocumentUrl(doc.storage_path);
+  const available = await ensureDocumentAvailable(url);
+  if (!available) {
+    alert('📡 Este documento no está disponible sin conexión. Conéctate a internet para descargarlo por primera vez.');
+    return;
+  }
+  markDocumentCachedIndicators(doc.storage_path);
+  window.open(url, '_blank', 'noopener');
+}
+
+function closeDocPreview() {
+  document.getElementById('docPreviewOverlay').classList.add('hidden');
+  document.getElementById('docPreviewBody').innerHTML = '';
+}
+
 function renderCityReservationsList(city, cityReservations) {
   const container = document.getElementById('cityDetailReservations');
   container.innerHTML = '';
@@ -2773,7 +3071,9 @@ function renderCityReservationsList(city, cityReservations) {
         ${fin.total > 0 ? `<div>${formatCop(fin.total)}</div>` : '<div>—</div>'}
         ${perPerson ? `<div style="font-size:0.75rem;font-weight:400;color:var(--text-dim);">${perPerson}</div>` : ''}
         ${res.personas > 1 ? `<div style="font-size:0.72rem;color:var(--text-dim);">👥 ${res.personas}</div>` : ''}
-      </div>`;
+      </div>
+      ${buildDocumentsSectionHTML(res.id)}`;
+    wireDocumentsSection(item, res.id, () => renderCityReservationsList(city, cityReservations));
     container.appendChild(item);
   });
 }
@@ -3820,7 +4120,8 @@ async function renderReservations() {
             ${fin.payStatus==='paid'&&fin.paidByName?`<span style="font-size:0.78rem;color:var(--text-dim);">por ${fin.paidByName}</span>`:''}
             ${fin.installments>1?`<span style="font-size:0.78rem;color:var(--text-dim);">${fin.installments} cuotas</span>`:''}
             ${(fin.payStatus==='unpaid'||fin.payStatus==='partial')&&fin.nextDue?`<span style="font-size:0.78rem;color:var(--work);">vence ${fin.nextDue}</span>`:''}
-          </div>`;
+          </div>
+          ${buildDocumentsSectionHTML(res.id)}`;
         card.querySelector('.edit-res').onclick = () => openResModal({reservation:res, index:idx});
         card.querySelector('.del-res').onclick = async () => {
           if (!confirm(`¿Eliminar "${res.nombre}"?`)) return;
@@ -3830,6 +4131,7 @@ async function renderReservations() {
             renderReservations();
           } catch(err) { alert('Error: ' + err.message); }
         };
+        wireDocumentsSection(card, res.id, () => renderReservations());
         cards.appendChild(card);
       });
     }
@@ -5460,6 +5762,15 @@ function runAssistantAction(action) {
     if (e.key === 'Escape' && !document.getElementById('loginOverlay').classList.contains('hidden')) {
       closeLoginModal();
     }
+    if (e.key === 'Escape' && !document.getElementById('docPreviewOverlay').classList.contains('hidden')) {
+      closeDocPreview();
+    }
+  });
+
+  // Document preview modal event listeners
+  document.getElementById('docPreviewClose')?.addEventListener('click', closeDocPreview);
+  document.getElementById('docPreviewOverlay')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('docPreviewOverlay')) closeDocPreview();
   });
 })();
 

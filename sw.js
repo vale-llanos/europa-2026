@@ -1,4 +1,5 @@
 const CACHE = 'europa-2026-v2';
+const DOC_CACHE = 'europa-2026-documents-v1'; // separate cache: app-shell version bumps never evict cached travel documents
 const ASSETS = ['./','./index.html','./icon.svg','./manifest.json'];
 
 self.addEventListener('install', e => {
@@ -12,13 +13,32 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== DOC_CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
+
+  // Travel-document Storage objects: cached only after being explicitly
+  // opened/downloaded once (see ensureDocumentAvailable in index.html) —
+  // never proactively precached. Checked before the generic Supabase bypass
+  // below, since Storage URLs also contain "supabase" and would otherwise
+  // always go straight to network.
+  if (url.includes('/storage/v1/object/public/travel-documents/')) {
+    e.respondWith(
+      caches.open(DOC_CACHE).then(cache => cache.match(e.request).then(cached => {
+        if (cached) return cached;
+        return fetch(e.request).then(resp => {
+          if (resp.ok) cache.put(e.request, resp.clone());
+          return resp;
+        }).catch(() => new Response(null, { status: 503, statusText: 'offline-no-cache' }));
+      }))
+    );
+    return;
+  }
+
   // Always network: Supabase data, CDNs, geocoding
   if (url.includes('supabase') || url.includes('cdn.jsdelivr') ||
       url.includes('unpkg.com') || url.includes('nominatim') ||
